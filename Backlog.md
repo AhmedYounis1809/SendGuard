@@ -42,9 +42,16 @@ These do **not** require mentor input and should be done in parallel while waiti
 | Backend | Python + **FastAPI** | Async support matters — we'll call multiple CAMARA APIs, ideally in parallel |
 | AI Agent | Python (LLM-based reasoning layer, e.g., Anthropic/OpenAI API, or a structured reasoning module if the Resource & Tooling Guide mandates a specific tool) | **Confirm with mentor / Resource & Tooling Guide before locking this in** |
 | Frontend | React (JS) | Single dashboard app — no need for a separate mobile app |
-| Database | SQLite (prototype) → Postgres if time allows | Stores transaction logs, user behavioral profiles, decision history |
-| Hosting (Demo) | Render / Railway (backend) + Vercel (frontend) | Pick whichever is fastest to deploy for the team |
+| Database | SQLite (prototype) → Postgres if time allows | Stores transaction logs, user behavioral profiles, decision history. **No migration tool (Alembic) on purpose** — schema changes fast early on; use `Base.metadata.drop_all()` + `create_all()` to reset during development (see `db/database.py`). Add Alembic later only if you need to preserve seeded demo data across schema changes. |
+| Hosting (Demo) | **Render** (backend) + **Vercel/Netlify** (frontend) | See Section 2.1 — free tiers have caveats |
 | API mocking | Local mock server for any CAMARA API not available/stable in sandbox | Critical fallback — see Section 6 |
+
+### 2.1 Free Deployment Notes (Read Before Demo Day)
+
+- **Backend (Render free tier):** the service sleeps after ~15 min of inactivity. First request after sleeping takes 30–60s to wake up (cold start). **Before any live demo, open the deployed URL yourself a few minutes early to wake it up**, or set up a free [UptimeRobot](https://uptimerobot.com) ping every 10 minutes during the demo window.
+- **Railway** no longer has a permanent free tier (trial credit only) — don't rely on it as primary hosting.
+- **Frontend (Vercel/Netlify free tier):** no cold-start issue, safe to rely on.
+- **Database (SQLite on Render free tier):** the filesystem is ephemeral — a server restart can wipe the SQLite file. This is acceptable for prototype demos since scenarios are seeded/hardcoded, not accumulated real data. If persistence matters more, migrate to a free hosted Postgres (**Neon** or **Supabase** both offer a genuinely free, non-trial tier) — the SQLAlchemy code should need minimal changes to switch.
 
 ⚠️ **Do not lock in the AI Agent implementation detail until the mentor confirms the Resource & Tooling Guide requirements.** The hackathon rules state the AI Agent must use approved tooling — verify before building.
 
