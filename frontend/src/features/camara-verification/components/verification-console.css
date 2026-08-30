@@ -1,0 +1,113 @@
+.verification-console {
+  background: var(--color-secondary-light);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.verification-console__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.verification-console__header h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0.35rem;
+}
+
+.verification-console__header p {
+  margin: 0;
+  color: #9fb3c2;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  max-width: 380px;
+}
+
+.verification-console__run-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-secondary);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1.25rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.verification-console__run-btn:hover:not(:disabled) {
+  background: var(--color-tertiary);
+  transform: translateY(-1px);
+}
+
+.verification-console__run-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.verification-console__status {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  align-self: flex-start;
+}
+
+.verification-console__status--done {
+  color: var(--color-tertiary);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.verification-console__status--error {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.verification-console__output {
+  margin: 0;
+  background: #061420;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  height: 320px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.verification-console__placeholder {
+  color: #4b6577;
+}
+
+.verification-console__line--header {
+  color: #6ea8c4;
+}
+
+.verification-console__line--success {
+  color: var(--color-tertiary);
+}
+
+.verification-console__line--error {
+  color: var(--color-danger);
+}
+
+.verification-console__line--default {
+  color: var(--color-neutral);
+}

@@ -1,0 +1,59 @@
+@import url("https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Cairo:wght@400;600;700;900&display=swap");
+
+:root {
+  --color-primary: #14b8a6;
+  --color-secondary: #0a1e2c;
+  --color-secondary-light: #13324a;
+  --color-tertiary: #10b981;
+  --color-neutral: #f8fafc;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+
+  --font-headline: "Chivo", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  color-scheme: dark;
+}
+
+/* Arabic has no Latin-style display face here — Cairo covers both headings
+   and body text legibly. Console output stays monospace regardless of
+   language since it renders raw technical values (weights, timestamps). */
+html[lang="ar"] {
+  --font-headline: "Cairo", sans-serif;
+  --font-body: "Cairo", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-secondary);
+  color: var(--color-neutral);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-headline);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
