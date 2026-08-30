@@ -11,24 +11,25 @@
   width: 100%;
   max-width: 720px;
   display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
+  /* Fixed to the physical left regardless of language — it opens the
+     physical-left nav drawer, so the trigger stays put next to it. */
+  direction: ltr;
+  justify-content: flex-start;
 }
 
-.app-shell__nav-link {
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 600;
+.app-shell__menu-btn {
+  font-size: 1.35rem;
+  line-height: 1;
   color: var(--color-primary);
   background: transparent;
   border: 1px solid rgba(20, 184, 166, 0.35);
-  border-radius: 999px;
-  padding: 0.4rem 1rem;
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
-.app-shell__nav-link:hover {
+.app-shell__menu-btn:hover {
   background: rgba(20, 184, 166, 0.12);
 }
 

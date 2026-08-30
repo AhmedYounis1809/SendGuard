@@ -7,8 +7,9 @@ export interface TranslationDictionary {
     subtitle: string;
   };
   nav: {
+    menu: string;
+    home: string;
     settings: string;
-    back: string;
     verify: string;
   };
   landing: {
@@ -16,13 +17,12 @@ export interface TranslationDictionary {
     solution: string;
     ctaButton: string;
   };
-  drawer: {
+  phoneStep: {
     title: string;
     phoneLabel: string;
     phoneHint: string;
     nextButton: string;
     changeNumberButton: string;
-    close: string;
   };
   settings: {
     title: string;

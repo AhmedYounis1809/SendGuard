@@ -7,8 +7,9 @@ export const ar: TranslationDictionary = {
     subtitle: "إشارات كشف احتيال مدعومة بالذكاء الاصطناعي من واجهات CAMARA لشبكات GSMA.",
   },
   nav: {
+    menu: "القائمة",
+    home: "الرئيسية",
     settings: "الإعدادات",
-    back: "رجوع",
     verify: "التحقق من CAMARA",
   },
   landing: {
@@ -18,13 +19,12 @@ export const ar: TranslationDictionary = {
       "SendGuard يعمل كطبقة ثقة فوق أي تطبيق محفظة أو بنك، يدمج إشارات شبكة الاتصالات مع سياق المعاملة في قرار واحد فوري.",
     ctaButton: "تشغيل التحقق من CAMARA",
   },
-  drawer: {
+  phoneStep: {
     title: "التحقق من واجهات CAMARA",
     phoneLabel: "رقم الموبايل",
     phoneHint: "القيمة الافتراضية رقم اختبار محاكاة نوكيا — غيّره لاختبار رقم آخر.",
     nextButton: "التالي",
     changeNumberButton: "تغيير الرقم",
-    close: "إغلاق",
   },
   settings: {
     title: "الإعدادات",

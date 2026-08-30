@@ -1,32 +1,30 @@
 import { useState } from "react";
-import { VerificationDrawer } from "./features/camara-verification";
+import { VerificationView } from "./features/camara-verification";
 import { SettingsPage } from "./features/settings";
+import { NavigationDrawer, type AppView } from "./features/navigation";
 import { useI18n } from "./core/i18n";
 import "./App.css";
 
-type View = "landing" | "settings";
-
 function App() {
   const { t } = useI18n();
-  const [view, setView] = useState<View>("landing");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [view, setView] = useState<AppView>("landing");
+  const [navOpen, setNavOpen] = useState(false);
+
+  const handleSelect = (nextView: AppView) => {
+    setView(nextView);
+    setNavOpen(false);
+  };
 
   return (
     <div className="app-shell">
       <nav className="app-shell__nav">
         <button
           type="button"
-          className="app-shell__nav-link"
-          onClick={() => setDrawerOpen(true)}
+          className="app-shell__menu-btn"
+          onClick={() => setNavOpen(true)}
+          aria-label={t("nav.menu")}
         >
-          {t("nav.verify")}
-        </button>
-        <button
-          type="button"
-          className="app-shell__nav-link"
-          onClick={() => setView(view === "landing" ? "settings" : "landing")}
-        >
-          {view === "landing" ? t("nav.settings") : t("nav.back")}
+          ☰
         </button>
       </nav>
 
@@ -37,24 +35,29 @@ function App() {
       </header>
 
       <main className="app-shell__main">
-        {view === "landing" ? (
+        {view === "landing" && (
           <section className="landing">
             <p className="landing__line">{t("landing.problem")}</p>
             <p className="landing__line">{t("landing.solution")}</p>
             <button
               type="button"
               className="landing__cta"
-              onClick={() => setDrawerOpen(true)}
+              onClick={() => setView("verification")}
             >
               {t("landing.ctaButton")}
             </button>
           </section>
-        ) : (
-          <SettingsPage />
         )}
+        {view === "verification" && <VerificationView />}
+        {view === "settings" && <SettingsPage />}
       </main>
 
-      <VerificationDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <NavigationDrawer
+        open={navOpen}
+        view={view}
+        onClose={() => setNavOpen(false)}
+        onSelect={handleSelect}
+      />
     </div>
   );
 }

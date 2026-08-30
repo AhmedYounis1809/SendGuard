@@ -7,8 +7,9 @@ export const en: TranslationDictionary = {
     subtitle: "AI-powered fraud signals from GSMA CAMARA network APIs.",
   },
   nav: {
+    menu: "Menu",
+    home: "Home",
     settings: "Settings",
-    back: "Back",
     verify: "CAMARA Verification",
   },
   landing: {
@@ -18,13 +19,12 @@ export const en: TranslationDictionary = {
       "SendGuard sits on top of any wallet or bank app as a trust layer, fusing telecom network signals with transaction context into one real-time decision.",
     ctaButton: "Run CAMARA Verification",
   },
-  drawer: {
+  phoneStep: {
     title: "CAMARA API Verification",
     phoneLabel: "Mobile Number",
     phoneHint: "Defaults to Nokia's Simulator Mode test number — change it to test another.",
     nextButton: "Next",
     changeNumberButton: "Change Number",
-    close: "Close",
   },
   settings: {
     title: "Settings",
