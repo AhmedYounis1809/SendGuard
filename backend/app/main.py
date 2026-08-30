@@ -13,6 +13,7 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.camara.sim_swap import get_sim_swap_score
 from app.camara.device_swap import get_device_swap_score
@@ -31,16 +32,21 @@ app.add_middleware(
 )
 
 
+class CamaraVerifyRequest(BaseModel):
+    phone_number: str = SIMULATOR_NUMBER
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
 @app.post("/api/camara/verify")
-def verify_camara_setup():
+def verify_camara_setup(request: CamaraVerifyRequest = CamaraVerifyRequest()):
+    phone_number = request.phone_number
     steps = []
 
-    sim_result = get_sim_swap_score(SIMULATOR_NUMBER)
+    sim_result = get_sim_swap_score(phone_number)
     steps.append({
         "step": 1,
         "id": "sim_swap",
@@ -53,7 +59,7 @@ def verify_camara_setup():
         ),
     })
 
-    device_result = get_device_swap_score(SIMULATOR_NUMBER)
+    device_result = get_device_swap_score(phone_number)
     steps.append({
         "step": 2,
         "id": "device_swap",
@@ -67,7 +73,7 @@ def verify_camara_setup():
     })
 
     location_result = verify_location(
-        SIMULATOR_NUMBER, latitude=CAIRO_LAT, longitude=CAIRO_LNG, radius_meters=50000
+        phone_number, latitude=CAIRO_LAT, longitude=CAIRO_LNG, radius_meters=50000
     )
     steps.append({
         "step": 3,

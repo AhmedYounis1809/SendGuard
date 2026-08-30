@@ -9,6 +9,20 @@ export interface TranslationDictionary {
   nav: {
     settings: string;
     back: string;
+    verify: string;
+  };
+  landing: {
+    problem: string;
+    solution: string;
+    ctaButton: string;
+  };
+  drawer: {
+    title: string;
+    phoneLabel: string;
+    phoneHint: string;
+    nextButton: string;
+    changeNumberButton: string;
+    close: string;
   };
   settings: {
     title: string;
@@ -22,6 +36,7 @@ export interface TranslationDictionary {
   verification: {
     title: string;
     description: string;
+    phoneNumberNote: string;
     runButton: string;
     runningButton: string;
     statusDone: string;

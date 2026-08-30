@@ -9,6 +9,22 @@ export const ar: TranslationDictionary = {
   nav: {
     settings: "الإعدادات",
     back: "رجوع",
+    verify: "التحقق من CAMARA",
+  },
+  landing: {
+    problem:
+      "المحتالون ينتحلون صفة دعم المحافظ والبنوك لخداع الضحايا وسرقة رمز التحقق — البنك يرى المعاملة فقط، ولا يعرف هل تغيّرت الشريحة أو الجهاز اليوم.",
+    solution:
+      "SendGuard يعمل كطبقة ثقة فوق أي تطبيق محفظة أو بنك، يدمج إشارات شبكة الاتصالات مع سياق المعاملة في قرار واحد فوري.",
+    ctaButton: "تشغيل التحقق من CAMARA",
+  },
+  drawer: {
+    title: "التحقق من واجهات CAMARA",
+    phoneLabel: "رقم الموبايل",
+    phoneHint: "القيمة الافتراضية رقم اختبار محاكاة نوكيا — غيّره لاختبار رقم آخر.",
+    nextButton: "التالي",
+    changeNumberButton: "تغيير الرقم",
+    close: "إغلاق",
   },
   settings: {
     title: "الإعدادات",
@@ -21,8 +37,8 @@ export const ar: TranslationDictionary = {
   },
   verification: {
     title: "التحقق من واجهات CAMARA",
-    description:
-      "يشغّل التحقق من تبديل الشريحة وتبديل الجهاز والتحقق من الموقع مقابل رقم محاكاة نوكيا من البداية إلى النهاية.",
+    description: "يشغّل التحقق من تبديل الشريحة وتبديل الجهاز والتحقق من الموقع من البداية للنهاية.",
+    phoneNumberNote: "الرقم قيد التحقق: {{phoneNumber}}",
     runButton: "تشغيل التحقق",
     runningButton: "جارٍ التشغيل…",
     statusDone: "تم اجتياز جميع الفحوصات",

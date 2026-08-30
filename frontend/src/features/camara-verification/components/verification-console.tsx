@@ -3,9 +3,13 @@ import { useI18n } from "../../../core/i18n";
 import { useCamaraVerification } from "../hooks/use-camara-verification";
 import "./verification-console.css";
 
-export function VerificationConsole() {
+interface VerificationConsoleProps {
+  phoneNumber: string;
+}
+
+export function VerificationConsole({ phoneNumber }: VerificationConsoleProps) {
   const { t } = useI18n();
-  const { lines, status, run } = useCamaraVerification();
+  const { lines, status, run } = useCamaraVerification(phoneNumber);
   const outputRef = useRef<HTMLPreElement>(null);
   const isRunning = status === "running";
 
@@ -19,6 +23,9 @@ export function VerificationConsole() {
         <div>
           <h2>{t("verification.title")}</h2>
           <p>{t("verification.description")}</p>
+          <p className="verification-console__phone-note">
+            {t("verification.phoneNumberNote", { phoneNumber })}
+          </p>
         </div>
         <button
           type="button"

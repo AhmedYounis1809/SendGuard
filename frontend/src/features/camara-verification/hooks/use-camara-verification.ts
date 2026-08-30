@@ -20,7 +20,7 @@ function wait(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-export function useCamaraVerification() {
+export function useCamaraVerification(phoneNumber: string) {
   const { t } = useI18n();
   const [lines, setLines] = useState<ConsoleLine[]>([]);
   const [status, setStatus] = useState<VerificationStatus>("idle");
@@ -41,7 +41,7 @@ export function useCamaraVerification() {
     pushLine(DIVIDER, "header");
 
     try {
-      const result = await runCamaraVerification();
+      const result = await runCamaraVerification(phoneNumber);
 
       for (const step of result.steps) {
         const signalName = t(`verification.signals.${step.id}`);
@@ -81,7 +81,7 @@ export function useCamaraVerification() {
       pushLine(t("verification.console.unexpectedError", { message }), "error");
       setStatus("error");
     }
-  }, [pushLine, t]);
+  }, [pushLine, t, phoneNumber]);
 
   return { lines, status, run };
 }

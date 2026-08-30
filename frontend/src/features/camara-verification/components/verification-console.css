@@ -30,6 +30,14 @@
   max-width: 380px;
 }
 
+.verification-console__header .verification-console__phone-note {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  max-width: none;
+}
+
 .verification-console__run-btn {
   font-family: var(--font-body);
   font-weight: 600;

@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { VerificationConsole } from "./features/camara-verification";
+import { VerificationDrawer } from "./features/camara-verification";
 import { SettingsPage } from "./features/settings";
 import { useI18n } from "./core/i18n";
 import "./App.css";
 
-type View = "dashboard" | "settings";
+type View = "landing" | "settings";
 
 function App() {
   const { t } = useI18n();
-  const [view, setView] = useState<View>("dashboard");
+  const [view, setView] = useState<View>("landing");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <div className="app-shell">
@@ -16,9 +17,16 @@ function App() {
         <button
           type="button"
           className="app-shell__nav-link"
-          onClick={() => setView(view === "dashboard" ? "settings" : "dashboard")}
+          onClick={() => setDrawerOpen(true)}
         >
-          {view === "dashboard" ? t("nav.settings") : t("nav.back")}
+          {t("nav.verify")}
+        </button>
+        <button
+          type="button"
+          className="app-shell__nav-link"
+          onClick={() => setView(view === "landing" ? "settings" : "landing")}
+        >
+          {view === "landing" ? t("nav.settings") : t("nav.back")}
         </button>
       </nav>
 
@@ -29,8 +37,24 @@ function App() {
       </header>
 
       <main className="app-shell__main">
-        {view === "dashboard" ? <VerificationConsole /> : <SettingsPage />}
+        {view === "landing" ? (
+          <section className="landing">
+            <p className="landing__line">{t("landing.problem")}</p>
+            <p className="landing__line">{t("landing.solution")}</p>
+            <button
+              type="button"
+              className="landing__cta"
+              onClick={() => setDrawerOpen(true)}
+            >
+              {t("landing.ctaButton")}
+            </button>
+          </section>
+        ) : (
+          <SettingsPage />
+        )}
       </main>
+
+      <VerificationDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }

@@ -9,6 +9,22 @@ export const en: TranslationDictionary = {
   nav: {
     settings: "Settings",
     back: "Back",
+    verify: "CAMARA Verification",
+  },
+  landing: {
+    problem:
+      "Fraudsters impersonate wallet and bank support to trick victims into handing over OTPs — the bank only sees the transaction, never whether the SIM or device changed today.",
+    solution:
+      "SendGuard sits on top of any wallet or bank app as a trust layer, fusing telecom network signals with transaction context into one real-time decision.",
+    ctaButton: "Run CAMARA Verification",
+  },
+  drawer: {
+    title: "CAMARA API Verification",
+    phoneLabel: "Mobile Number",
+    phoneHint: "Defaults to Nokia's Simulator Mode test number — change it to test another.",
+    nextButton: "Next",
+    changeNumberButton: "Change Number",
+    close: "Close",
   },
   settings: {
     title: "Settings",
@@ -21,8 +37,8 @@ export const en: TranslationDictionary = {
   },
   verification: {
     title: "CAMARA API Verification",
-    description:
-      "Runs SIM Swap, Device Swap, and Location Verification against the Nokia simulator number end-to-end.",
+    description: "Runs SIM Swap, Device Swap, and Location Verification end-to-end.",
+    phoneNumberNote: "Verifying number: {{phoneNumber}}",
     runButton: "Run Verification",
     runningButton: "Running…",
     statusDone: "All checks passed",
