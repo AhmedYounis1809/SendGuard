@@ -44,7 +44,20 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.nav-drawer__header span {
+.nav-drawer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nav-drawer__logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.nav-drawer__brand span {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -75,6 +88,9 @@
 }
 
 .nav-drawer__item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 0.95rem;
@@ -88,6 +104,18 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+.nav-drawer__item-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.nav-drawer__item-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .nav-drawer__item:hover {
   background: rgba(255, 255, 255, 0.06);
 }
@@ -99,4 +127,24 @@
 
 .nav-drawer__item--active:hover {
   background: var(--color-primary);
+}
+
+/* Desktop: the drawer is constant on screen — a permanent sidebar, not a
+   toggleable overlay. Below this width it stays the mobile pattern (icon
+   trigger + slide-in overlay), since a fixed 280px column has no room on
+   a phone. Placed last so it wins over .nav-drawer--open at equal
+   specificity, regardless of the open/closed toggle state. */
+@media (min-width: 880px) {
+  .nav-drawer__backdrop {
+    display: none;
+  }
+
+  .nav-drawer {
+    transform: translateX(0);
+    box-shadow: none;
+  }
+
+  .nav-drawer__close {
+    display: none;
+  }
 }

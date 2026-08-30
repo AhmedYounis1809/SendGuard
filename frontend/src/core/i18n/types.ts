@@ -8,6 +8,7 @@ export interface TranslationDictionary {
   };
   nav: {
     menu: string;
+    close: string;
     home: string;
     settings: string;
     verify: string;

@@ -107,3 +107,18 @@
   background: var(--color-tertiary);
   transform: translateY(-1px);
 }
+
+/* Matches the nav drawer's desktop breakpoint (navigation-drawer.css) —
+   once the sidebar becomes a permanent 280px column pinned to the
+   physical left, page content shifts right instead of sitting under it,
+   and the icon trigger for the (now unused) overlay toggle disappears. */
+@media (min-width: 880px) {
+  .app-shell__nav {
+    display: none;
+  }
+
+  .app-shell {
+    margin-left: 280px;
+    padding-top: 4rem;
+  }
+}

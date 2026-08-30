@@ -8,6 +8,7 @@ export const ar: TranslationDictionary = {
   },
   nav: {
     menu: "القائمة",
+    close: "إغلاق القائمة",
     home: "الرئيسية",
     settings: "الإعدادات",
     verify: "التحقق من CAMARA",

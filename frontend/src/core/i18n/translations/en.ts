@@ -8,6 +8,7 @@ export const en: TranslationDictionary = {
   },
   nav: {
     menu: "Menu",
+    close: "Close menu",
     home: "Home",
     settings: "Settings",
     verify: "CAMARA Verification",
