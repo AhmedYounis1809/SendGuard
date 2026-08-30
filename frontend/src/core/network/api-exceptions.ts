@@ -26,7 +26,11 @@ export class ApiExceptions {
     }
 
     if (!error.response && error.code === "ERR_NETWORK") {
-      return new ApiError(NetworkErrorMessages.noInternet);
+      // The browser reports "no internet" and "server unreachable" (wrong
+      // port, server not started, CORS preflight failure) identically —
+      // there's no response to distinguish them by. connectionError covers
+      // both without falsely blaming the user's network.
+      return new ApiError(NetworkErrorMessages.connectionError);
     }
 
     switch (error.code) {
