@@ -52,7 +52,7 @@
 }
 
 .scenario-selector__item:hover:not(:disabled) {
-  border-color: rgba(20, 184, 166, 0.5);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
   transform: translateY(-1px);
 }
 
@@ -63,7 +63,7 @@
 
 .scenario-selector__item--active {
   border-color: var(--color-primary);
-  background: rgba(20, 184, 166, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .scenario-selector__name {
@@ -262,8 +262,8 @@
 
 .decision-card__pill--adaptive {
   color: var(--color-primary);
-  background: rgba(20, 184, 166, 0.15);
-  border-color: rgba(20, 184, 166, 0.4);
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border-color: rgba(var(--color-primary-rgb), 0.4);
 }
 
 .decision-card__pill--hold {

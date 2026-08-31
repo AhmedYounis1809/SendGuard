@@ -31,11 +31,18 @@ export const en: TranslationDictionary = {
   },
   settings: {
     title: "Settings",
-    description: "Choose the language used across the SendGuard dashboard.",
+    description: "Choose the language and color theme used across the SendGuard dashboard.",
     languageLabel: "Language",
     languages: {
       en: "English",
       ar: "Arabic",
+    },
+    themeLabel: "Color Theme",
+    themes: {
+      sendguard: { name: "SendGuard", description: "Default — teal on navy" },
+      "royal-navy-gold": { name: "Royal Navy & Gold", description: "Premium agencies & finance" },
+      "charcoal-gold": { name: "Charcoal & Soft Gold", description: "Luxury branding for startups" },
+      "amber-navy": { name: "Black & Gold Elegance", description: "Bold, high-contrast accent" },
     },
   },
   verification: {

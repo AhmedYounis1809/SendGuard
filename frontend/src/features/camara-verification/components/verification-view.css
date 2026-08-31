@@ -82,12 +82,12 @@
   font-weight: 600;
   color: var(--color-primary);
   background: transparent;
-  border: 1px solid rgba(20, 184, 166, 0.35);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.35);
   border-radius: 999px;
   padding: 0.35rem 0.9rem;
   cursor: pointer;
 }
 
 .phone-step__change-btn:hover {
-  background: rgba(20, 184, 166, 0.12);
+  background: rgba(var(--color-primary-rgb), 0.12);
 }

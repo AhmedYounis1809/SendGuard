@@ -35,6 +35,13 @@ export interface TranslationDictionary {
       en: string;
       ar: string;
     };
+    themeLabel: string;
+    themes: {
+      sendguard: { name: string; description: string };
+      "royal-navy-gold": { name: string; description: string };
+      "charcoal-gold": { name: string; description: string };
+      "amber-navy": { name: string; description: string };
+    };
   };
   verification: {
     title: string;

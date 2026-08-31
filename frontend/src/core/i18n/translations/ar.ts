@@ -31,11 +31,18 @@ export const ar: TranslationDictionary = {
   },
   settings: {
     title: "الإعدادات",
-    description: "اختر اللغة المستخدمة في لوحة تحكم SendGuard.",
+    description: "اختر اللغة ونمط الألوان المستخدمين في لوحة تحكم SendGuard.",
     languageLabel: "اللغة",
     languages: {
       en: "الإنجليزية",
       ar: "العربية",
+    },
+    themeLabel: "نمط الألوان",
+    themes: {
+      sendguard: { name: "SendGuard", description: "الافتراضي — سماوي على كحلي" },
+      "royal-navy-gold": { name: "الكحلي الملكي والذهبي", description: "للوكالات المميزة وشركات التمويل" },
+      "charcoal-gold": { name: "الفحمي والذهبي الناعم", description: "هوية فاخرة للشركات الناشئة" },
+      "amber-navy": { name: "الأسود والذهبي الأنيق", description: "لون مميز جريء وعالي التباين" },
     },
   },
   verification: {
