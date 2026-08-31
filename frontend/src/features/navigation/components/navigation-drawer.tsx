@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useI18n } from "../../../core/i18n";
 import "./navigation-drawer.css";
 
-export type AppView = "landing" | "verification" | "settings";
+export type AppView = "landing" | "dashboard" | "verification" | "settings";
 
 interface NavigationDrawerProps {
   open: boolean;
@@ -28,6 +28,14 @@ const ICONS: Record<AppView, ReactNode> = {
       <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 19V10" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 19V5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 19v-7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 19V9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="3" />
@@ -45,6 +53,7 @@ export function NavigationDrawer({ open, view, onClose, onSelect }: NavigationDr
 
   const items: { key: AppView; label: string }[] = [
     { key: "landing", label: t("nav.home") },
+    { key: "dashboard", label: t("nav.dashboard") },
     { key: "verification", label: t("nav.verify") },
     { key: "settings", label: t("nav.settings") },
   ];

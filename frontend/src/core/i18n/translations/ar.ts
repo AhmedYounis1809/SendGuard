@@ -12,6 +12,7 @@ export const ar: TranslationDictionary = {
     home: "الرئيسية",
     settings: "الإعدادات",
     verify: "التحقق من CAMARA",
+    dashboard: "لوحة الثقة",
   },
   landing: {
     problem:
@@ -19,6 +20,7 @@ export const ar: TranslationDictionary = {
     solution:
       "SendGuard يعمل كطبقة ثقة فوق أي تطبيق محفظة أو بنك، يدمج إشارات شبكة الاتصالات مع سياق المعاملة في قرار واحد فوري.",
     ctaButton: "تشغيل التحقق من CAMARA",
+    dashboardCtaButton: "فتح لوحة الثقة",
   },
   phoneStep: {
     title: "التحقق من واجهات CAMARA",
@@ -58,6 +60,67 @@ export const ar: TranslationDictionary = {
       allPassed: "تم اجتياز الفحوصات الثلاث — تم تأكيد عمل الإعداد بالكامل.",
       someFailed: "فشلت بعض الفحوصات — راجع التفاصيل أعلاه.",
       unexpectedError: "فشل التحقق: {{message}}",
+    },
+  },
+  dashboard: {
+    title: "لوحة الثقة",
+    description: "اختر سيناريو تجريبي لمشاهدة إشارات CAMARA الحية ومؤشر الثقة وقرار الوكيل التدريجي.",
+    placeholder: "اختر سيناريو أعلاه لتشغيل معاملة محاكاة.",
+    trustIndexLabel: "مؤشر الثقة",
+    reasonsTitle: "السبب",
+    verifyButton: "تحقق من الهوية",
+    verifyingButton: "جارٍ التحقق…",
+    scenarios: {
+      legitimate: "معاملة مشروعة",
+      false_positive: "إنذار كاذب",
+      suspicious: "مشتبه به",
+      high_risk: "خطر مرتفع",
+    },
+    scenarioDescriptions: {
+      legitimate: "كل الإشارات طبيعية — سماح فوري.",
+      false_positive: "تبديل شريحة وجهاز جديد وسفر، لكن الرقم موثّق — تحقق تكيّفي.",
+      suspicious: "تبديل شريحة حديث وجهاز غير معروف ومبلغ كبير — تعليق المعاملة.",
+      high_risk: "تبديل شريحة حديث جدًا، وفشل التحقق من الرقم، وموقع غير معتاد — تجميد مؤقت.",
+    },
+    signals: {
+      number_verification: "التحقق من الرقم",
+      sim_swap: "تبديل الشريحة",
+      device_swap: "تبديل الجهاز",
+      location_verification: "التحقق من الموقع",
+    },
+    signalStatus: {
+      pass: "نجاح",
+      fail: "مُعلّم",
+      pending: "قيد الانتظار",
+    },
+    signalDetails: {
+      numberVerified: "الرقم مطابق لسجل المشغّل",
+      numberNotVerified: "لم يتم التحقق من الرقم",
+      noRecentSwap: "لا يوجد تبديل حديث",
+      recentSwap: "تم التبديل منذ {{hours}} ساعة",
+      locationNormal: "ضمن نمط الموقع المعتاد",
+      locationUnusual: "خارج نمط الموقع المعتاد",
+    },
+    decisions: {
+      ALLOW: "سماح",
+      ADAPTIVE_VERIFICATION: "تحقق تكيّفي",
+      TRANSACTION_HOLD: "تعليق المعاملة",
+      TEMPORARY_FREEZE: "تجميد مؤقت",
+    },
+    reasons: {
+      numberVerified: "تم التحقق من الرقم (+30)",
+      numberVerificationFailed: "فشل التحقق من الرقم",
+      knownDevice: "جهاز معروف (+15)",
+      newDevice: "تم رصد جهاز جديد منذ {{hours}} ساعة (-15)",
+      unknownDevice: "جهاز غير معروف (-15)",
+      normalLocation: "موقع طبيعي (+15)",
+      unusualLocation: "موقع خارج النمط المعتاد (-15)",
+      normalBehavior: "سلوك طبيعي (+10)",
+      recentSimChange: "تغيير شريحة حديث منذ {{hours}} ساعة (-25)",
+      largeAmount: "مبلغ كبير (-10)",
+      veryLargeAmount: "مبلغ كبير جدًا (-10)",
+      verificationSucceeded: "نجح التحقق الإضافي (+40)",
+      confidenceRecovered: "تم استعادة الثقة",
     },
   },
 };

@@ -11,9 +11,8 @@
   width: 100%;
   max-width: 720px;
   display: flex;
-  /* Fixed to the physical left regardless of language — it opens the
-     physical-left nav drawer, so the trigger stays put next to it. */
-  direction: ltr;
+  /* Follows document direction — the trigger sits on the same
+     inline-start side the drawer now opens from in either language. */
   justify-content: flex-start;
 }
 
@@ -89,8 +88,15 @@
   max-width: 560px;
 }
 
-.landing__cta {
+.landing__cta-row {
   margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.landing__cta {
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 0.95rem;
@@ -108,17 +114,30 @@
   transform: translateY(-1px);
 }
 
+.landing__cta--secondary {
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+}
+
+.landing__cta--secondary:hover {
+  background: rgba(20, 184, 166, 0.12);
+  color: var(--color-primary);
+}
+
 /* Matches the nav drawer's desktop breakpoint (navigation-drawer.css) —
    once the sidebar becomes a permanent 280px column pinned to the
-   physical left, page content shifts right instead of sitting under it,
-   and the icon trigger for the (now unused) overlay toggle disappears. */
+   inline-start edge, page content shifts to make room instead of
+   sitting under it, and the icon trigger for the (now unused) overlay
+   toggle disappears. margin-inline-start flips the offset to the right
+   automatically in RTL. */
 @media (min-width: 880px) {
   .app-shell__nav {
     display: none;
   }
 
   .app-shell {
-    margin-left: 280px;
+    margin-inline-start: 280px;
     padding-top: 4rem;
   }
 }

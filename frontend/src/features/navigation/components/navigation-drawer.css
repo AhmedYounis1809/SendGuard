@@ -13,23 +13,32 @@
   pointer-events: auto;
 }
 
-/* Anchored to the physical left edge regardless of language direction —
-   a slide-out menu that mirrors position on RTL reads as disorienting
-   rather than "correctly localized". */
+/* Opens from the inline-start edge — left in LTR, right in RTL — via
+   the --nav-drawer-closed-x/--nav-drawer-shadow-x custom properties
+   below, so it slides in from the same side the menu trigger sits on
+   in either language. */
 .nav-drawer {
+  --nav-drawer-closed-x: -100%;
+  --nav-drawer-shadow-x: 20px;
+
   position: fixed;
   top: 0;
-  left: 0;
+  inset-inline-start: 0;
   bottom: 0;
   width: min(280px, 80vw);
   background: var(--color-secondary-light);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 20px 0 60px rgba(0, 0, 0, 0.4);
-  transform: translateX(-100%);
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--nav-drawer-shadow-x) 0 60px rgba(0, 0, 0, 0.4);
+  transform: translateX(var(--nav-drawer-closed-x));
   transition: transform 0.25s ease;
   z-index: 50;
   display: flex;
   flex-direction: column;
+}
+
+html[dir="rtl"] .nav-drawer {
+  --nav-drawer-closed-x: 100%;
+  --nav-drawer-shadow-x: -20px;
 }
 
 .nav-drawer--open {

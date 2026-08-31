@@ -12,6 +12,7 @@ export const en: TranslationDictionary = {
     home: "Home",
     settings: "Settings",
     verify: "CAMARA Verification",
+    dashboard: "Trust Dashboard",
   },
   landing: {
     problem:
@@ -19,6 +20,7 @@ export const en: TranslationDictionary = {
     solution:
       "SendGuard sits on top of any wallet or bank app as a trust layer, fusing telecom network signals with transaction context into one real-time decision.",
     ctaButton: "Run CAMARA Verification",
+    dashboardCtaButton: "Open Trust Dashboard",
   },
   phoneStep: {
     title: "CAMARA API Verification",
@@ -58,6 +60,68 @@ export const en: TranslationDictionary = {
       allPassed: "All 3 checks PASSED — setup confirmed working end-to-end.",
       someFailed: "Some checks FAILED — see details above.",
       unexpectedError: "Verification failed: {{message}}",
+    },
+  },
+  dashboard: {
+    title: "Trust Dashboard",
+    description:
+      "Pick a demo scenario to see live CAMARA signals, the Trust Index, and the Agent's graduated decision.",
+    placeholder: "Select a scenario above to run a simulated transaction.",
+    trustIndexLabel: "Trust Index",
+    reasonsTitle: "Why",
+    verifyButton: "Verify Identity",
+    verifyingButton: "Verifying…",
+    scenarios: {
+      legitimate: "Legitimate",
+      false_positive: "False Positive",
+      suspicious: "Suspicious",
+      high_risk: "High Risk",
+    },
+    scenarioDescriptions: {
+      legitimate: "All signals normal — instant Allow.",
+      false_positive: "SIM swap + new device + travel, but number verifies — Adaptive Verification.",
+      suspicious: "Recent SIM swap + unknown device + large amount — Transaction Hold.",
+      high_risk: "Very recent SIM swap, failed number check, unusual location — Temporary Freeze.",
+    },
+    signals: {
+      number_verification: "Number Verification",
+      sim_swap: "SIM Swap",
+      device_swap: "Device Swap",
+      location_verification: "Location Verification",
+    },
+    signalStatus: {
+      pass: "Pass",
+      fail: "Flagged",
+      pending: "Pending",
+    },
+    signalDetails: {
+      numberVerified: "Number matches carrier record",
+      numberNotVerified: "Number did not verify",
+      noRecentSwap: "No recent swap detected",
+      recentSwap: "Swapped {{hours}}h ago",
+      locationNormal: "Within usual location pattern",
+      locationUnusual: "Outside usual location pattern",
+    },
+    decisions: {
+      ALLOW: "Allow",
+      ADAPTIVE_VERIFICATION: "Adaptive Verification",
+      TRANSACTION_HOLD: "Transaction Hold",
+      TEMPORARY_FREEZE: "Temporary Freeze",
+    },
+    reasons: {
+      numberVerified: "Number verified (+30)",
+      numberVerificationFailed: "Number verification FAILED",
+      knownDevice: "Known device (+15)",
+      newDevice: "New device detected {{hours}}h ago (-15)",
+      unknownDevice: "Unknown device (-15)",
+      normalLocation: "Normal location (+15)",
+      unusualLocation: "Location outside usual pattern (-15)",
+      normalBehavior: "Normal behavior (+10)",
+      recentSimChange: "Recent SIM change {{hours}}h ago (-25)",
+      largeAmount: "Large amount (-10)",
+      veryLargeAmount: "Very large amount (-10)",
+      verificationSucceeded: "Additional verification succeeded (+40)",
+      confidenceRecovered: "Confidence recovered",
     },
   },
 };
