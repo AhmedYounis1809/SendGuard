@@ -31,7 +31,7 @@ from app.camara.sim_swap import get_sim_swap_score
 from app.camara.device_swap import get_device_swap_score
 from app.camara.location_verification import verify_location
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
 _client = None
 
@@ -122,35 +122,30 @@ AVAILABLE_TOOLS = [check_sim_swap_tool, check_device_swap_tool, check_location_t
 TOOL_MAP = {fn.__name__: fn for fn in AVAILABLE_TOOLS}
 
 
-def decide_and_fetch_signals(transaction_context: dict) -> dict:
+def decide_and_fetch_signals(transaction_context: dict, max_rounds: int = 4) -> dict:
     """
-    The core Agent step: given transaction context, Gemini decides WHICH
-    signal tools are worth calling for THIS specific transaction — it does
-    not blindly call every tool every time. We then execute exactly the
-    tools it requested ourselves (manual function calling, not automatic),
-    and return the raw collected results for trust_engine.py to score.
+    The core Agent step — a REAL multi-turn Reason -> Tool -> Reason loop
+    (fixed from an earlier version that only did a single-shot "plan all
+    tools upfront, execute, stop" pass — that was NOT true ReAct behavior,
+    since Gemini never saw any tool result before finishing).
+
+    Now: Gemini sees the result of each round of tool calls BEFORE deciding
+    whether it needs to call anything else. For example, it might check SIM
+    Swap first, see it's clean, and decide that's sufficient for a small
+    transaction — or see it's suspicious and decide to check Device Swap
+    and Location too before finishing. This is genuine iterative reasoning,
+    not a single upfront plan.
 
     Args:
-        transaction_context: e.g. {
-            "phone_number": "+99999991000",
-            "amount": 50000,
-            "currency": "EGP",
-            "is_new_beneficiary": True,
-            "recent_transaction_count_10min": 1,
-            "usual_latitude": 30.0444,
-            "usual_longitude": 31.2357,
-            "has_location_history": True,
-        }
+        transaction_context: see module docstring example
+        max_rounds: safety cap on the number of Reason->Tool round trips,
+            so a live demo can never hang on a runaway loop (3 tools total
+            exist, so 4 rounds is generous headroom, not a real limit on
+            normal behavior)
 
     Returns:
-        dict mapping tool name -> tool result, e.g.:
-        {
-            "check_sim_swap_tool": {"swapped_recently": True, ...},
-            "check_device_swap_tool": {"swapped_recently": False, ...},
-        }
-        (Tools the agent chose NOT to call simply won't be present as keys
-        — trust_engine.py must treat a missing signal as "not checked",
-        not as "safe".)
+        dict mapping tool name -> tool result (same shape as before) for
+        every tool called across ALL rounds, for trust_engine.py to score.
     """
     client = get_client()
 
@@ -160,44 +155,61 @@ processed with the following context:
 
 {transaction_context}
 
-Decide which of the available tools are worth calling to assess this
-transaction's risk. You do not need to call every tool for every
-transaction. For example:
-- A small, routine transaction to a frequent beneficiary may need little
-  or no additional checking.
-- A large transaction, or one to a new beneficiary, or one following
-  unusual activity, should be checked thoroughly (SIM swap and device swap
-  are cheap and valuable to check on most non-trivial transactions).
-- Only call the location check if `has_location_history` is true — there's
-  nothing to compare against otherwise.
+You have tools available to check network-based risk signals. You do not
+need to decide everything upfront: call one or more tools, look at the
+result, and THEN decide whether you have enough evidence or need to check
+something else. For example, if an early signal already looks clearly
+risky or clearly clean, you may decide further checks aren't needed for a
+small transaction — but for a large transaction or one to a new
+beneficiary, be thorough. Only call the location check if
+`has_location_history` is true. Once you believe you have sufficient
+evidence, stop calling tools and simply confirm you're done."""
 
-Call the relevant tools now."""
+    contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
+    collected_signals: dict = {}
 
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            tools=AVAILABLE_TOOLS,
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                disable=True
+    for round_num in range(max_rounds):
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                tools=AVAILABLE_TOOLS,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=True
+                ),
             ),
-        ),
-    )
+        )
 
-    function_calls = response.function_calls or []
+        function_calls = response.function_calls or []
+        if not function_calls:
+            # Gemini decided it has enough evidence — genuine stopping
+            # condition, not just "ran out of a fixed plan."
+            break
 
-    collected_signals = {}
-    for call in function_calls:
-        fn = TOOL_MAP.get(call.name)
-        if fn is None:
-            continue
-        try:
-            result = fn(**call.args)
+        # Record the model's turn (including its function-call requests)
+        # in the conversation so it has memory of what it already asked for.
+        contents.append(response.candidates[0].content)
+
+        # Execute exactly the tools requested THIS round, and feed the
+        # results back as the next turn — this is what lets Gemini reason
+        # over real evidence before its next decision.
+        function_response_parts = []
+        for call in function_calls:
+            fn = TOOL_MAP.get(call.name)
+            if fn is None:
+                continue
+            try:
+                result = fn(**call.args)
+            except Exception as exc:
+                print(f"[SendGuard] Tool '{call.name}' failed: {exc}")
+                result = {"degraded": True, "error": str(exc)}
+
             collected_signals[call.name] = result
-        except Exception as exc:
-            # Degraded Mode at the tool level: record the failure, don't crash.
-            print(f"[SendGuard] Tool '{call.name}' failed: {exc}")
-            collected_signals[call.name] = {"degraded": True, "error": str(exc)}
+            function_response_parts.append(
+                types.Part.from_function_response(name=call.name, response=result)
+            )
+
+        contents.append(types.Content(role="tool", parts=function_response_parts))
 
     return collected_signals
     
