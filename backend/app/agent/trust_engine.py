@@ -52,6 +52,46 @@ WEIGHTS = {
 LARGE_AMOUNT_THRESHOLD_EGP = 30000
 BURST_TRANSACTION_COUNT_THRESHOLD = 3  # 3+ transactions within the tracked window = burst
 
+# ---------------------------------------------------------------------------
+# Time-decay weight tiers for SIM Swap / Device Swap.
+#
+# NOTE ON DUPLICATION: app/camara/sim_swap.py and device_swap.py ALSO
+# compute an internal "weight" as a convenience for their own standalone
+# use (e.g. verify_full_agent.py's early tests). That value is intentionally
+# NEVER shown to Gemini (see orchestrator.py's tool wrappers, which strip
+# it) and is NOT what the Trust Engine uses. The Trust Engine recomputes
+# weight from raw `hours_since_swap` evidence independently, right here, so
+# that ALL risk arithmetic provably lives in exactly one deterministic
+# place. If these thresholds ever change, update both here and in the
+# camara/*.py files' own internal scoring for consistency, or (better,
+# future refactor) remove the internal scoring from camara/*.py entirely
+# and make this function their single source of truth.
+# ---------------------------------------------------------------------------
+
+def _sim_swap_weight(hours_since_swap: Optional[float]) -> int:
+    if hours_since_swap is None:
+        return 0
+    if hours_since_swap < 24:
+        return -25
+    elif hours_since_swap < 24 * 7:
+        return -10
+    elif hours_since_swap < 24 * 30:
+        return -2
+    return 0
+
+
+def _device_swap_weight(hours_since_swap: Optional[float]) -> int:
+    if hours_since_swap is None:
+        return 0
+    if hours_since_swap < 24:
+        return -15
+    elif hours_since_swap < 24 * 7:
+        return -8
+    elif hours_since_swap < 24 * 30:
+        return -2
+    return 0
+
+
 # A degraded (failed) signal must never silently help the score. If any
 # CALLED signal failed, we cap the maximum achievable trust so the system
 # can never reach a confident ALLOW on incomplete evidence.
@@ -102,34 +142,34 @@ def compute_trust(collected_signals: dict, transaction_context: dict) -> TrustAs
 
     uncalled_signals = [name for name in ALL_TOOL_NAMES if name not in collected_signals]
 
-    # --- SIM Swap (weight already time-decayed inside sim_swap.py) ---
+    # --- SIM Swap (evidence only in — weight computed HERE, not upstream) ---
     sim = collected_signals.get("check_sim_swap_tool")
     if sim:
         if sim.get("degraded"):
             degraded_signals.append("sim_swap")
             reasons.append("SIM Swap check failed — treated as unknown, not safe")
         else:
-            w = sim.get("weight", 0)
+            hrs = sim.get("hours_since_swap")
+            w = _sim_swap_weight(hrs)
             score += w
             contributions["sim_swap"] = w
             if w < 0:
-                hrs = sim.get("hours_since_swap")
                 reasons.append(f"Recent SIM change {hrs}h ago ({w:+d})")
             else:
                 reasons.append(f"No recent SIM change ({w:+d})")
 
-    # --- Device Swap (weight already time-decayed inside device_swap.py) ---
+    # --- Device Swap (evidence only in — weight computed HERE, not upstream) ---
     device = collected_signals.get("check_device_swap_tool")
     if device:
         if device.get("degraded"):
             degraded_signals.append("device_swap")
             reasons.append("Device Swap check failed — treated as unknown, not safe")
         else:
-            w = device.get("weight", 0)
+            hrs = device.get("hours_since_swap")
+            w = _device_swap_weight(hrs)
             score += w
             contributions["device_swap"] = w
             if w < 0:
-                hrs = device.get("hours_since_swap")
                 reasons.append(f"New device detected {hrs}h ago ({w:+d})")
             else:
                 reasons.append(f"Known device ({w:+d})")
@@ -231,3 +271,4 @@ def apply_verification_recovery(
         uncalled_signals=previous_assessment.uncalled_signals,
         reasons=new_reasons,
     )
+    
