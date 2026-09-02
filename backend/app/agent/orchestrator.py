@@ -42,7 +42,7 @@ from app.camara.sim_swap import get_sim_swap_score
 from app.camara.device_swap import get_device_swap_score
 from app.camara.location_verification import verify_location
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 _client = None
 

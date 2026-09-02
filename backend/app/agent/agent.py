@@ -51,9 +51,13 @@ def run_agent(transaction_context: dict) -> dict:
     # 2. Reason (deterministic): compute the Trust Index and risk tier.
     assessment = compute_trust(collected_signals, transaction_context)
 
-    # 3. Decide: pick the specific action within that tier.
+    # 3. Decide: pick the specific action within that tier — Gemini chooses
+    #    from the Python-defined allowed set, Python validates the choice.
     action = recommend_action(
-        assessment.tier, transaction_context, assessment.degraded_signals
+        assessment.tier,
+        transaction_context,
+        assessment.degraded_signals,
+        assessment.reasons,
     )
 
     # 4. Act: EXECUTE the action. The agent does not stop at a recommendation.
@@ -71,3 +75,4 @@ def run_agent(transaction_context: dict) -> dict:
         "degraded_signals": assessment.degraded_signals,
         "raw_signals": collected_signals,  # full per-tool detail, for the frontend Signal Panel
     }
+    
