@@ -54,8 +54,6 @@ export function useCamaraVerification() {
     pushLine(DIVIDER, "header");
     pushLine("SendGuard — Running AI Agent", "header");
     pushLine(DIVIDER, "header");
-    pushLine("");
-    pushLine("⏳ Running agent, please wait — this can take up to a minute (Gemini, and a fallback provider if needed)...");
 
     let agentResult: AgentTestResult;
     try {
