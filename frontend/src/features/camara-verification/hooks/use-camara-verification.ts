@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useI18n } from "../../../core/i18n";
 import { AgentApiError, runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
 
@@ -39,16 +39,17 @@ export function useCamaraVerification() {
   const { t } = useI18n();
   const [lines, setLines] = useState<ConsoleLine[]>([]);
   const [status, setStatus] = useState<VerificationStatus>("idle");
-  const nextLineId = useRef(0);
 
+  // Derives the next id purely from `prev` — no external mutable counter —
+  // so this stays safe under Strict Mode's double-invocation of state
+  // updaters (a ref-based counter read here previously caused colliding
+  // ids and "duplicate key" warnings under the double invoke).
   const pushLine = useCallback((text: string, tone: ConsoleLineTone = "default") => {
-    nextLineId.current += 1;
-    setLines((prev) => [...prev, { id: nextLineId.current, text, tone }]);
+    setLines((prev) => [...prev, { id: prev.length + 1, text, tone }]);
   }, []);
 
   const run = useCallback(async (payload: AgentTransactionInput) => {
     setLines([]);
-    nextLineId.current = 0;
     setStatus("running");
 
     pushLine(DIVIDER, "header");

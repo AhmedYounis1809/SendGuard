@@ -66,6 +66,13 @@
   max-width: 720px;
 }
 
+/* The transaction risk assessment flow uses a two-column dashboard layout
+   (form/console + a live payload panel) that needs more room than the
+   720px column other pages use. */
+.app-shell__main--wide {
+  max-width: 1040px;
+}
+
 .landing {
   background: var(--color-secondary-light);
   border: 1px solid rgba(255, 255, 255, 0.08);
