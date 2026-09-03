@@ -4,17 +4,71 @@
   gap: 1.5rem;
 }
 
-.dashboard-view__intro h2 {
-  font-size: 1.15rem;
-  margin-bottom: 0.35rem;
+.dash-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.dashboard-view__intro p {
+.dash-header__title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dash-header__title-row h1 {
+  font-size: 1.75rem;
+}
+
+.dash-header__count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.35);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.dash-header__desc {
   margin: 0;
   color: #9fb3c2;
   font-family: var(--font-body);
-  font-size: 0.875rem;
-  max-width: 480px;
+  font-size: 0.9rem;
+  max-width: 620px;
+}
+
+.dash-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dash-filter {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #9fb3c2;
+  background: var(--color-secondary-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.dash-filter:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  color: var(--color-neutral);
+}
+
+.dash-filter--active {
+  color: var(--color-tertiary);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 .dashboard-view__placeholder {
@@ -41,19 +95,13 @@
   background: var(--color-secondary-light);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  padding: 1rem 1.1rem;
-  cursor: pointer;
+  padding: 1.1rem 1.2rem;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.receipt-card:hover:not(:disabled) {
+.receipt-card:hover {
   border-color: rgba(var(--color-primary-rgb), 0.5);
   transform: translateY(-1px);
-}
-
-.receipt-card:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .receipt-card--active {
@@ -119,6 +167,103 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.receipt-card__value--safe {
+  color: var(--color-tertiary) !important;
+}
+
+.receipt-card__value--warn {
+  color: var(--color-warning) !important;
+}
+
+.receipt-card__value--danger {
+  color: var(--color-danger) !important;
+  font-weight: 700;
+}
+
+.receipt-card__value--muted {
+  color: #6b8494 !important;
+  font-style: italic;
+}
+
+.receipt-card__run-btn {
+  margin-top: 0.5rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--color-neutral);
+  background: transparent;
+  border-inline: none;
+  border-bottom: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.receipt-card__run-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+}
+
+.receipt-card__run-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Risk chip — narrative-only framing for the demo card, not a real
+   decision (that only exists once the agent has actually run). */
+
+.risk-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.risk-chip__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.risk-chip--low {
+  color: var(--color-tertiary);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.risk-chip--medium {
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.risk-chip--elevated {
+  color: #e08a3c;
+  background: rgba(224, 138, 60, 0.14);
+  border-color: rgba(224, 138, 60, 0.35);
+}
+
+.risk-chip--high {
+  color: #e0637c;
+  background: rgba(224, 99, 124, 0.14);
+  border-color: rgba(224, 99, 124, 0.35);
+}
+
+.risk-chip--critical {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 /* Decision pill (reuses the tier vocabulary from dashboard.decisions.*) */

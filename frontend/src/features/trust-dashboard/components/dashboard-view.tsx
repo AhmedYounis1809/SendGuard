@@ -1,9 +1,9 @@
-import { useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useI18n } from "../../../core/i18n";
 import { env } from "../../../core/config/env";
 import { useCamaraVerification } from "../../camara-verification/hooks/use-camara-verification";
 import { DEMO_SCENARIOS } from "../data/demo-scenarios";
-import type { DemoScenario } from "../types/trust-dashboard.types";
+import type { DemoScenario, ScenarioCategory } from "../types/trust-dashboard.types";
 import { TrustIndexGauge } from "./trust-index-gauge";
 import "../../camara-verification/components/verification-flow.css";
 import "./dashboard-view.css";
@@ -15,8 +15,22 @@ const DECISION_MODIFIER: Record<string, string> = {
   TEMPORARY_FREEZE: "freeze",
 };
 
+type FilterId = "all" | ScenarioCategory;
+
+const FILTERS: { id: FilterId; label: string }[] = [
+  { id: "all", label: `All Scenarios (${DEMO_SCENARIOS.length})` },
+  { id: "routine", label: "Low Risk / Routine" },
+  { id: "friction", label: "Elevated Friction" },
+  { id: "suspicious", label: "High-Risk Suspicious" },
+];
+
+// High recent-transaction velocity is the one receipt field worth calling
+// out on the card itself — everything else the risk chip already frames.
+const VELOCITY_SPIKE_THRESHOLD = 3;
+
 export function DashboardView() {
   const { t } = useI18n();
+  const [filter, setFilter] = useState<FilterId>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { lines, status, result, run } = useCamaraVerification();
   const outputRef = useRef<HTMLPreElement>(null);
@@ -26,6 +40,14 @@ export function DashboardView() {
   }, [lines]);
 
   const isRunning = status === "running";
+
+  const visibleScenarios = useMemo(
+    () =>
+      filter === "all"
+        ? DEMO_SCENARIOS
+        : DEMO_SCENARIOS.filter((s) => s.category === filter),
+    [filter],
+  );
 
   const handleRun = (scenario: DemoScenario) => {
     setActiveId(scenario.id);
@@ -54,68 +76,127 @@ export function DashboardView() {
 
   return (
     <div className="dashboard-view">
-      <div className="dashboard-view__intro">
-        <h2>{t("dashboard.title")}</h2>
-        <p>{t("dashboard.description")}</p>
+      <div className="dash-header">
+        <div className="dash-header__title-row">
+          <h1>{t("dashboard.title")}</h1>
+          <span className="dash-header__count">{DEMO_SCENARIOS.length} Scenarios</span>
+        </div>
+        <p className="dash-header__desc">{t("dashboard.description")}</p>
+
+        <div className="dash-filters" role="tablist" aria-label="Filter scenarios by risk category">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={filter === f.id}
+              className={`dash-filter ${filter === f.id ? "dash-filter--active" : ""}`}
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="receipt-grid" role="radiogroup" aria-label={t("dashboard.title")}>
-        {DEMO_SCENARIOS.map((scenario) => (
-          <button
-            key={scenario.id}
-            type="button"
-            role="radio"
-            aria-checked={activeId === scenario.id}
-            className={`receipt-card ${
-              activeId === scenario.id ? "receipt-card--active" : ""
-            }`}
-            disabled={isRunning}
-            onClick={() => handleRun(scenario)}
-          >
-            <div className="receipt-card__head">
-              <span className="receipt-card__title">{scenario.label}</span>
-              <span className="receipt-card__amount">
-                {scenario.payload.amount.toLocaleString()} {scenario.payload.currency}
-              </span>
-            </div>
-            <p className="receipt-card__summary">{scenario.summary}</p>
+      <div className="receipt-grid">
+        {visibleScenarios.map((scenario) => {
+          const isSpiking =
+            scenario.payload.recent_transaction_count_10min >= VELOCITY_SPIKE_THRESHOLD;
 
-            <div className="receipt-card__rows" dir="ltr">
-              <div className="receipt-card__row">
-                <span>Sender</span>
-                <span>{scenario.sender.name}</span>
+          return (
+            <div
+              key={scenario.id}
+              className={`receipt-card ${
+                activeId === scenario.id ? "receipt-card--active" : ""
+              }`}
+            >
+              <div className="receipt-card__head">
+                <span className="receipt-card__title">{scenario.label}</span>
+                <span className="receipt-card__amount">
+                  {scenario.payload.amount.toLocaleString()} {scenario.payload.currency}
+                </span>
               </div>
-              <div className="receipt-card__row">
-                <span>Phone</span>
-                <span>{scenario.sender.phone}</span>
+
+              <span className={`risk-chip risk-chip--${scenario.riskTier}`}>
+                {scenario.riskTier === "critical" && <span className="risk-chip__dot" />}
+                {scenario.riskLabel}
+              </span>
+
+              <p className="receipt-card__summary">{scenario.summary}</p>
+
+              <div className="receipt-card__rows" dir="ltr">
+                <div className="receipt-card__row">
+                  <span>Sender</span>
+                  <span>{scenario.sender.name}</span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Phone</span>
+                  <span>{scenario.sender.phone}</span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Recipient</span>
+                  <span>{scenario.recipient.name}</span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Phone</span>
+                  <span>{scenario.recipient.phone}</span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Beneficiary</span>
+                  <span
+                    className={
+                      scenario.payload.is_new_beneficiary
+                        ? "receipt-card__value--warn"
+                        : "receipt-card__value--safe"
+                    }
+                  >
+                    {scenario.payload.is_new_beneficiary ? "New" : "Existing"}
+                  </span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Recent Tx</span>
+                  <span className={isSpiking ? "receipt-card__value--danger" : undefined}>
+                    {scenario.payload.recent_transaction_count_10min} in 10 min
+                  </span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Location</span>
+                  <span
+                    className={
+                      scenario.payload.location_reference_available
+                        ? undefined
+                        : "receipt-card__value--muted"
+                    }
+                  >
+                    {scenario.locationLabel}
+                  </span>
+                </div>
+                <div className="receipt-card__row">
+                  <span>Device</span>
+                  <span
+                    className={
+                      scenario.payload.trusted_device_available
+                        ? "receipt-card__value--safe"
+                        : "receipt-card__value--warn"
+                    }
+                  >
+                    {scenario.payload.trusted_device_available ? "Trusted" : "Untrusted"}
+                  </span>
+                </div>
               </div>
-              <div className="receipt-card__row">
-                <span>Recipient</span>
-                <span>{scenario.recipient.name}</span>
-              </div>
-              <div className="receipt-card__row">
-                <span>Phone</span>
-                <span>{scenario.recipient.phone}</span>
-              </div>
-              <div className="receipt-card__row">
-                <span>Beneficiary</span>
-                <span>{scenario.payload.is_new_beneficiary ? "New" : "Existing"}</span>
-              </div>
-              <div className="receipt-card__row">
-                <span>Recent Tx</span>
-                <span>{scenario.payload.recent_transaction_count_10min} in 10 min</span>
-              </div>
-              <div className="receipt-card__row">
-                <span>Location</span>
-                <span>{scenario.locationLabel}</span>
-              </div>
-              <div className="receipt-card__row">
-                <span>Device</span>
-                <span>{scenario.payload.trusted_device_available ? "Trusted" : "Untrusted"}</span>
-              </div>
+
+              <button
+                type="button"
+                className="receipt-card__run-btn"
+                disabled={isRunning}
+                onClick={() => handleRun(scenario)}
+              >
+                {isRunning && activeId === scenario.id ? "Simulating…" : "Simulate Scenario →"}
+              </button>
             </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
 
       {!activeScenario && (

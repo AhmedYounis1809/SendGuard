@@ -6,10 +6,21 @@ export interface DemoParty {
   account: string;
 }
 
+// Narrative-only risk framing for the card badge — this is not the agent's
+// actual decision (that only exists after a live run); it's a hint at what
+// kind of transaction context this scenario represents.
+export type RiskTier = "low" | "medium" | "elevated" | "high" | "critical";
+
+// Groups scenarios under the dashboard's filter tabs.
+export type ScenarioCategory = "routine" | "friction" | "suspicious";
+
 export interface DemoScenario {
   id: string;
   label: string;
   summary: string;
+  category: ScenarioCategory;
+  riskTier: RiskTier;
+  riskLabel: string;
   sender: DemoParty;
   recipient: DemoParty;
   locationLabel: string;
