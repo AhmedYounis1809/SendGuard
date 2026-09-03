@@ -11,7 +11,7 @@ export const ar: TranslationDictionary = {
     close: "إغلاق القائمة",
     home: "الرئيسية",
     settings: "الإعدادات",
-    verify: "التحقق من CAMARA",
+    verify: "تقييم مخاطر المعاملة",
     dashboard: "لوحة الثقة",
   },
   landing: {
@@ -19,11 +19,11 @@ export const ar: TranslationDictionary = {
       "المحتالون ينتحلون صفة دعم المحافظ والبنوك لخداع الضحايا وسرقة رمز التحقق — البنك يرى المعاملة فقط، ولا يعرف هل تغيّرت الشريحة أو الجهاز اليوم.",
     solution:
       "SendGuard يعمل كطبقة ثقة فوق أي تطبيق محفظة أو بنك، يدمج إشارات شبكة الاتصالات مع سياق المعاملة في قرار واحد فوري.",
-    ctaButton: "تشغيل التحقق من CAMARA",
+    ctaButton: "تشغيل تقييم مخاطر المعاملة",
     dashboardCtaButton: "فتح لوحة الثقة",
   },
   phoneStep: {
-    title: "التحقق من واجهات CAMARA",
+    title: "تقييم مخاطر المعاملة",
     phoneLabel: "رقم الموبايل",
     phoneHint: "القيمة الافتراضية رقم اختبار محاكاة نوكيا — غيّره لاختبار رقم آخر.",
     nextButton: "التالي",
@@ -46,7 +46,7 @@ export const ar: TranslationDictionary = {
     },
   },
   verification: {
-    title: "التحقق من واجهات CAMARA",
+    title: "تقييم مخاطر المعاملة",
     description: "يشغّل التحقق من تبديل الشريحة وتبديل الجهاز والتحقق من الموقع من البداية للنهاية.",
     phoneNumberNote: "الرقم قيد التحقق: {{phoneNumber}}",
     runButton: "تشغيل التحقق",
@@ -60,13 +60,18 @@ export const ar: TranslationDictionary = {
       location_verification: "التحقق من الموقع",
     },
     console: {
-      header: "سيند جارد — التحقق من واجهات CAMARA",
+      header: "سيند جارد — تقييم مخاطر المعاملة",
       testing: "[{{step}}/{{total}}] اختبار {{name}}...",
       passed: "نجاح",
       failed: "فشل",
       allPassed: "تم اجتياز الفحوصات الثلاث — تم تأكيد عمل الإعداد بالكامل.",
       someFailed: "فشلت بعض الفحوصات — راجع التفاصيل أعلاه.",
       unexpectedError: "فشل التحقق: {{message}}",
+      errors: {
+        network: "تعذّر الوصول إلى خادم SendGuard على {{apiBase}}. تأكد من أن الخادم يعمل ويمكن الوصول إليه، وأن CORS يسمح بهذا المصدر.",
+        timeout: "انتهت مهلة طلب الوكيل بعد {{seconds}} ثانية",
+        http: "فشل طلب الوكيل ({{status}}): {{detail}}",
+      },
     },
   },
   dashboard: {

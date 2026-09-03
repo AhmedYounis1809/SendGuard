@@ -65,6 +65,11 @@ export interface TranslationDictionary {
       allPassed: string;
       someFailed: string;
       unexpectedError: string;
+      errors: {
+        network: string;
+        timeout: string;
+        http: string;
+      };
     };
   };
   dashboard: {

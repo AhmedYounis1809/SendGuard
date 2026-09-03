@@ -34,6 +34,20 @@ export interface AgentTestResult {
   fallback_reason: string | null;
 }
 
+// Carries a translation key (+ interpolation params) instead of a hardcoded
+// English message, so callers with access to the i18n `t()` function can
+// render this in the active language.
+export class AgentApiError extends Error {
+  constructor(
+    public readonly i18nKey: string,
+    public readonly i18nParams: Record<string, string | number> | undefined,
+    fallbackMessage: string,
+  ) {
+    super(fallbackMessage);
+    this.name = "AgentApiError";
+  }
+}
+
 export async function runAgentTest(payload: AgentTransactionInput): Promise<AgentTestResult> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -48,13 +62,28 @@ export async function runAgentTest(payload: AgentTransactionInput): Promise<Agen
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      throw new Error(`Agent request failed (${response.status}): ${text || response.statusText}`);
+      throw new AgentApiError(
+        "verification.console.errors.http",
+        { status: response.status, detail: text || response.statusText },
+        `Agent request failed (${response.status}): ${text || response.statusText}`,
+      );
     }
 
     return (await response.json()) as AgentTestResult;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error(`Agent request timed out after ${TIMEOUT_MS / 1000}s`);
+      throw new AgentApiError(
+        "verification.console.errors.timeout",
+        { seconds: TIMEOUT_MS / 1000 },
+        `Agent request timed out after ${TIMEOUT_MS / 1000}s`,
+      );
+    }
+    if (error instanceof TypeError) {
+      throw new AgentApiError(
+        "verification.console.errors.network",
+        { apiBase: API_BASE },
+        `Could not reach the SendGuard backend at ${API_BASE}. Make sure the backend server is running and reachable, and that CORS allows this origin.`,
+      );
     }
     throw error;
   } finally {

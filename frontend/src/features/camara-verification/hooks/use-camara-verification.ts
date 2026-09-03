@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
+import { useI18n } from "../../../core/i18n";
+import { AgentApiError, runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
 
 export type ConsoleLineTone = "default" | "success" | "error" | "header";
 
@@ -35,6 +36,7 @@ function modeLabel(mode: string): string {
 }
 
 export function useCamaraVerification() {
+  const { t } = useI18n();
   const [lines, setLines] = useState<ConsoleLine[]>([]);
   const [status, setStatus] = useState<VerificationStatus>("idle");
   const nextLineId = useRef(0);
@@ -59,7 +61,12 @@ export function useCamaraVerification() {
     try {
       agentResult = await runAgentTest(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unexpected error";
+      const message =
+        error instanceof AgentApiError
+          ? t(error.i18nKey, error.i18nParams)
+          : error instanceof Error
+            ? error.message
+            : "Unexpected error";
       pushLine("");
       pushLine(`❌ ${message}`, "error");
       setStatus("error");
@@ -116,7 +123,7 @@ export function useCamaraVerification() {
     pushLine(DIVIDER, "header");
 
     setStatus("done");
-  }, [pushLine]);
+  }, [pushLine, t]);
 
   return { lines, status, run };
 }

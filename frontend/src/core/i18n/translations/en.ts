@@ -11,7 +11,7 @@ export const en: TranslationDictionary = {
     close: "Close menu",
     home: "Home",
     settings: "Settings",
-    verify: "CAMARA Verification",
+    verify: "Transaction Risk Assessment",
     dashboard: "Trust Dashboard",
   },
   landing: {
@@ -19,11 +19,11 @@ export const en: TranslationDictionary = {
       "Fraudsters impersonate wallet and bank support to trick victims into handing over OTPs — the bank only sees the transaction, never whether the SIM or device changed today.",
     solution:
       "SendGuard sits on top of any wallet or bank app as a trust layer, fusing telecom network signals with transaction context into one real-time decision.",
-    ctaButton: "Run CAMARA Verification",
+    ctaButton: "Run Transaction Risk Assessment",
     dashboardCtaButton: "Open Trust Dashboard",
   },
   phoneStep: {
-    title: "CAMARA API Verification",
+    title: "Transaction Risk Assessment",
     phoneLabel: "Mobile Number",
     phoneHint: "Defaults to Nokia's Simulator Mode test number — change it to test another.",
     nextButton: "Next",
@@ -46,7 +46,7 @@ export const en: TranslationDictionary = {
     },
   },
   verification: {
-    title: "CAMARA API Verification",
+    title: "Transaction Risk Assessment",
     description: "Runs SIM Swap, Device Swap, and Location Verification end-to-end.",
     phoneNumberNote: "Verifying number: {{phoneNumber}}",
     runButton: "Run Verification",
@@ -60,13 +60,19 @@ export const en: TranslationDictionary = {
       location_verification: "Location Verification",
     },
     console: {
-      header: "SendGuard — CAMARA API Verification",
+      header: "SendGuard — Transaction Risk Assessment",
       testing: "[{{step}}/{{total}}] Testing {{name}}...",
       passed: "PASSED",
       failed: "FAILED",
       allPassed: "All 3 checks PASSED — setup confirmed working end-to-end.",
       someFailed: "Some checks FAILED — see details above.",
       unexpectedError: "Verification failed: {{message}}",
+      errors: {
+        network:
+          "Could not reach the SendGuard backend at {{apiBase}}. Make sure the backend server is running and reachable, and that CORS allows this origin.",
+        timeout: "Agent request timed out after {{seconds}}s",
+        http: "Agent request failed ({{status}}): {{detail}}",
+      },
     },
   },
   dashboard: {
