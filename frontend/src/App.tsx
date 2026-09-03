@@ -37,7 +37,7 @@ function App() {
 
       <main
         className={
-          view === "verification"
+          view === "verification" || view === "dashboard"
             ? "app-shell__main app-shell__main--wide"
             : "app-shell__main"
         }

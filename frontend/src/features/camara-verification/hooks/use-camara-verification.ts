@@ -39,6 +39,7 @@ export function useCamaraVerification() {
   const { t } = useI18n();
   const [lines, setLines] = useState<ConsoleLine[]>([]);
   const [status, setStatus] = useState<VerificationStatus>("idle");
+  const [result, setResult] = useState<AgentTestResult | null>(null);
 
   // Derives the next id purely from `prev` — no external mutable counter —
   // so this stays safe under Strict Mode's double-invocation of state
@@ -50,6 +51,7 @@ export function useCamaraVerification() {
 
   const run = useCallback(async (payload: AgentTransactionInput) => {
     setLines([]);
+    setResult(null);
     setStatus("running");
 
     pushLine(DIVIDER, "header");
@@ -121,8 +123,9 @@ export function useCamaraVerification() {
     pushLine("✅ Agent decision complete.", "success");
     pushLine(DIVIDER, "header");
 
+    setResult(agentResult);
     setStatus("done");
   }, [pushLine, t]);
 
-  return { lines, status, run };
+  return { lines, status, result, run };
 }

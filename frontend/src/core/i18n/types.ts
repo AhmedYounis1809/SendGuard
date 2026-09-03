@@ -78,59 +78,11 @@ export interface TranslationDictionary {
     placeholder: string;
     trustIndexLabel: string;
     reasonsTitle: string;
-    verifyButton: string;
-    verifyingButton: string;
-    scenarios: {
-      legitimate: string;
-      false_positive: string;
-      suspicious: string;
-      high_risk: string;
-    };
-    scenarioDescriptions: {
-      legitimate: string;
-      false_positive: string;
-      suspicious: string;
-      high_risk: string;
-    };
-    signals: {
-      number_verification: string;
-      sim_swap: string;
-      device_swap: string;
-      location_verification: string;
-    };
-    signalStatus: {
-      pass: string;
-      fail: string;
-      pending: string;
-    };
-    signalDetails: {
-      numberVerified: string;
-      numberNotVerified: string;
-      noRecentSwap: string;
-      recentSwap: string;
-      locationNormal: string;
-      locationUnusual: string;
-    };
     decisions: {
       ALLOW: string;
       ADAPTIVE_VERIFICATION: string;
       TRANSACTION_HOLD: string;
       TEMPORARY_FREEZE: string;
-    };
-    reasons: {
-      numberVerified: string;
-      numberVerificationFailed: string;
-      knownDevice: string;
-      newDevice: string;
-      unknownDevice: string;
-      normalLocation: string;
-      unusualLocation: string;
-      normalBehavior: string;
-      recentSimChange: string;
-      largeAmount: string;
-      veryLargeAmount: string;
-      verificationSucceeded: string;
-      confidenceRecovered: string;
     };
   };
 }

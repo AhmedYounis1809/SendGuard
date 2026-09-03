@@ -1,16 +1,56 @@
+import { useRef, useState, useEffect } from "react";
 import { useI18n } from "../../../core/i18n";
-import { useTrustDashboard } from "../hooks/use-trust-dashboard";
-import { ScenarioSelector } from "./scenario-selector";
-import { SignalPanel } from "./signal-panel";
+import { env } from "../../../core/config/env";
+import { useCamaraVerification } from "../../camara-verification/hooks/use-camara-verification";
+import { DEMO_SCENARIOS } from "../data/demo-scenarios";
+import type { DemoScenario } from "../types/trust-dashboard.types";
 import { TrustIndexGauge } from "./trust-index-gauge";
-import { DecisionCard } from "./decision-card";
+import "../../camara-verification/components/verification-flow.css";
 import "./dashboard-view.css";
+
+const DECISION_MODIFIER: Record<string, string> = {
+  ALLOW: "allow",
+  ADAPTIVE_VERIFICATION: "adaptive",
+  TRANSACTION_HOLD: "hold",
+  TEMPORARY_FREEZE: "freeze",
+};
 
 export function DashboardView() {
   const { t } = useI18n();
-  const { scenario, status, result, revealedCount, verifying, recovered, run, verify } = useTrustDashboard();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const { lines, status, result, run } = useCamaraVerification();
+  const outputRef = useRef<HTMLPreElement>(null);
 
-  const isRunning = status === "running" || status === "revealing";
+  useEffect(() => {
+    outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight });
+  }, [lines]);
+
+  const isRunning = status === "running";
+
+  const handleRun = (scenario: DemoScenario) => {
+    setActiveId(scenario.id);
+    // The card displays the demo sender/recipient phone numbers for the
+    // story, but the agent is always called with the real CAMARA
+    // simulator number — that's the only number with live signal data.
+    run({
+      ...scenario.payload,
+      phone_number: env.defaultPhoneNumber,
+    });
+  };
+
+  const activeScenario = DEMO_SCENARIOS.find((s) => s.id === activeId) ?? null;
+
+  const statusClass =
+    status === "running"
+      ? "ra-terminal__status--running"
+      : status === "done"
+        ? "ra-terminal__status--done"
+        : status === "error"
+          ? "ra-terminal__status--error"
+          : "";
+
+  const decisionTier = result?.tier ?? null;
+  const decisionModifier = decisionTier ? DECISION_MODIFIER[decisionTier] : null;
 
   return (
     <div className="dashboard-view">
@@ -19,23 +59,143 @@ export function DashboardView() {
         <p>{t("dashboard.description")}</p>
       </div>
 
-      <ScenarioSelector active={scenario} disabled={isRunning} onSelect={run} />
+      <div className="receipt-grid" role="radiogroup" aria-label={t("dashboard.title")}>
+        {DEMO_SCENARIOS.map((scenario) => (
+          <button
+            key={scenario.id}
+            type="button"
+            role="radio"
+            aria-checked={activeId === scenario.id}
+            className={`receipt-card ${
+              activeId === scenario.id ? "receipt-card--active" : ""
+            }`}
+            disabled={isRunning}
+            onClick={() => handleRun(scenario)}
+          >
+            <div className="receipt-card__head">
+              <span className="receipt-card__title">{scenario.label}</span>
+              <span className="receipt-card__amount">
+                {scenario.payload.amount.toLocaleString()} {scenario.payload.currency}
+              </span>
+            </div>
+            <p className="receipt-card__summary">{scenario.summary}</p>
 
-      {status === "idle" && <p className="dashboard-view__placeholder">{t("dashboard.placeholder")}</p>}
+            <div className="receipt-card__rows" dir="ltr">
+              <div className="receipt-card__row">
+                <span>Sender</span>
+                <span>{scenario.sender.name}</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Phone</span>
+                <span>{scenario.sender.phone}</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Recipient</span>
+                <span>{scenario.recipient.name}</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Phone</span>
+                <span>{scenario.recipient.phone}</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Beneficiary</span>
+                <span>{scenario.payload.is_new_beneficiary ? "New" : "Existing"}</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Recent Tx</span>
+                <span>{scenario.payload.recent_transaction_count_10min} in 10 min</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Location</span>
+                <span>{scenario.locationLabel}</span>
+              </div>
+              <div className="receipt-card__row">
+                <span>Device</span>
+                <span>{scenario.payload.trusted_device_available ? "Trusted" : "Untrusted"}</span>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
 
-      {result && (
-        <div className="dashboard-view__result">
-          <SignalPanel signals={result.signals} revealedCount={status === "running" ? 0 : revealedCount} />
-          <TrustIndexGauge value={status === "done" ? result.trust_index : 0} />
-          {status === "done" && (
-            <DecisionCard
-              decision={result.decision}
-              reasons={result.reasons}
-              onVerify={verify}
-              verifying={verifying}
-              recovered={recovered}
-            />
-          )}
+      {!activeScenario && (
+        <p className="dashboard-view__placeholder">{t("dashboard.placeholder")}</p>
+      )}
+
+      {activeScenario && (
+        <div className="ra-card">
+          <div className="ra-layout">
+            <div>
+              <div className="ra-card__header">
+                <div>
+                  <div className="ra-card__heading">
+                    <h2>{activeScenario.label}</h2>
+                    <span className="ra-stage">Live Agent</span>
+                  </div>
+                  <p className="ra-card__desc">{activeScenario.summary}</p>
+                  <p className="ra-card__note">
+                    Verifying number: {env.defaultPhoneNumber}
+                  </p>
+                </div>
+              </div>
+
+              <div className="ra-terminal">
+                <div className="ra-terminal__titlebar">
+                  <span className="ra-terminal__dots">
+                    <span className="ra-terminal__dot ra-terminal__dot--red" />
+                    <span className="ra-terminal__dot ra-terminal__dot--yellow" />
+                    <span className="ra-terminal__dot ra-terminal__dot--green" />
+                  </span>
+                  <span className="ra-terminal__title">sendguard-agent-cli</span>
+                  <span className={`ra-terminal__status ${statusClass}`}>
+                    {status === "idle" ? "Idle" : status.toUpperCase()}
+                  </span>
+                </div>
+
+                <pre
+                  className="ra-terminal__body ra-terminal__body--tall"
+                  ref={outputRef}
+                  dir="ltr"
+                  aria-live="polite"
+                >
+                  {lines.map((line) => (
+                    <div key={line.id} className={`ra-terminal__line--${line.tone}`}>
+                      {line.text || " "}
+                    </div>
+                  ))}
+                </pre>
+              </div>
+            </div>
+
+            <aside className="ra-panel">
+              <div className="ra-panel__title">
+                <span>Live Decision</span>
+              </div>
+
+              <TrustIndexGauge value={result?.trust_index ?? 0} />
+
+              {decisionTier && decisionModifier && (
+                <span
+                  className={`dash-pill dash-pill--${decisionModifier}`}
+                >
+                  {t(`dashboard.decisions.${decisionTier}`)}
+                </span>
+              )}
+
+              {result && result.reasons.length > 0 && (
+                <div className="ra-checklist">
+                  <div className="ra-checklist__head">
+                    <span>{t("dashboard.reasonsTitle")}</span>
+                  </div>
+                  {result.reasons.map((reason, index) => (
+                    <div className="ra-checklist__item" key={index}>
+                      <span>{reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </aside>
+          </div>
         </div>
       )}
     </div>
