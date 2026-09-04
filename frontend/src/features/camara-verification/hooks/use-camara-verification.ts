@@ -2,17 +2,25 @@ import { useCallback, useState } from "react";
 import { useI18n } from "../../../core/i18n";
 import { AgentApiError, runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
 
-export type ConsoleLineTone = "default" | "success" | "error" | "header";
+export type ConsoleLineTone =
+  | "default"
+  | "success"
+  | "error"
+  | "header"
+  | "step"
+  | "muted"
+  | "metric"
+  | "rule";
 
 export interface ConsoleLine {
   id: number;
   text: string;
   tone: ConsoleLineTone;
+  /** When set, the line renders as an aligned label/value row. */
+  value?: string;
 }
 
 export type VerificationStatus = "idle" | "running" | "done" | "error";
-
-const DIVIDER = "=".repeat(60);
 
 const SIGNAL_STEPS: { tool: string; label: string }[] = [
   { tool: "check_sim_swap_tool", label: "SIM Swap" },
@@ -28,10 +36,10 @@ function describeSignal(tool: string, data: Record<string, unknown> | undefined)
 }
 
 function modeLabel(mode: string): string {
-  if (mode === "AI_GEMINI") return "🟢 Gemini (primary)";
-  if (mode === "AI_GROQ_FALLBACK") return "🟡 Groq (fallback)";
-  if (mode === "DETERMINISTIC_FALLBACK") return "🔴 Deterministic (no LLM available)";
-  if (mode === "DETERMINISTIC_ONLY_OPTION") return "⚪ Deterministic (only option for this tier)";
+  if (mode === "AI_GEMINI") return "Gemini (primary)";
+  if (mode === "AI_GROQ_FALLBACK") return "Groq (fallback)";
+  if (mode === "DETERMINISTIC_FALLBACK") return "Deterministic (no LLM available)";
+  if (mode === "DETERMINISTIC_ONLY_OPTION") return "Deterministic (only option for this tier)";
   return mode;
 }
 
@@ -45,18 +53,19 @@ export function useCamaraVerification() {
   // so this stays safe under Strict Mode's double-invocation of state
   // updaters (a ref-based counter read here previously caused colliding
   // ids and "duplicate key" warnings under the double invoke).
-  const pushLine = useCallback((text: string, tone: ConsoleLineTone = "default") => {
-    setLines((prev) => [...prev, { id: prev.length + 1, text, tone }]);
-  }, []);
+  const pushLine = useCallback(
+    (text: string, tone: ConsoleLineTone = "default", value?: string) => {
+      setLines((prev) => [...prev, { id: prev.length + 1, text, tone, value }]);
+    },
+    [],
+  );
 
   const run = useCallback(async (payload: AgentTransactionInput) => {
     setLines([]);
     setResult(null);
     setStatus("running");
 
-    pushLine(DIVIDER, "header");
-    pushLine("SendGuard — Running AI Agent", "header");
-    pushLine(DIVIDER, "header");
+    pushLine("Gathering evidence", "header");
 
     let agentResult: AgentTestResult;
     try {
@@ -68,19 +77,19 @@ export function useCamaraVerification() {
           : error instanceof Error
             ? error.message
             : "Unexpected error";
-      pushLine("");
-      pushLine(`❌ ${message}`, "error");
+      pushLine(message, "error");
       setStatus("error");
       return;
     }
 
-    pushLine("");
-    pushLine(`Signal source: ${modeLabel(agentResult.agent_mode)}`);
+    pushLine("Signal source", "metric", modeLabel(agentResult.agent_mode));
     if (agentResult.fallback_reason) {
-      pushLine(`  (fallback reason: ${agentResult.fallback_reason})`);
+      pushLine(`fallback reason: ${agentResult.fallback_reason}`, "muted");
     }
 
-    const totalChecked = SIGNAL_STEPS.filter((s) => agentResult.signals_checked.includes(s.tool)).length;
+    const totalChecked = SIGNAL_STEPS.filter((s) =>
+      agentResult.signals_checked.includes(s.tool),
+    ).length;
     let stepNum = 0;
 
     for (const { tool, label } of SIGNAL_STEPS) {
@@ -89,39 +98,29 @@ export function useCamaraVerification() {
 
       if (wasChecked) {
         stepNum += 1;
-        pushLine("");
-        pushLine(`[${stepNum}/${totalChecked}] Checking ${label}...`);
+        pushLine(`[${stepNum}/${totalChecked}] ${label}`, "step");
         const data = agentResult.raw_signals[tool];
         const degraded = Boolean(data?.degraded);
         const detail = describeSignal(tool, data);
-        pushLine(degraded ? `  ❌ FAILED: ${detail}` : `  ✅ PASSED — ${detail}`, degraded ? "error" : "success");
+        pushLine(detail, degraded ? "error" : "success");
       } else if (wasSkipped) {
-        pushLine("");
-        pushLine(`${label}: skipped by the agent (not needed for this transaction)`);
+        pushLine(`${label} — skipped (not needed for this transaction)`, "muted");
       }
     }
 
-    pushLine("");
-    pushLine(DIVIDER, "header");
-    pushLine("Evidence gathering complete.", "success");
-    pushLine(DIVIDER, "header");
+    pushLine("", "rule");
+    pushLine("Decision", "header");
 
-    pushLine("");
-    pushLine(`Trust Index: ${agentResult.trust_index}/100`);
-    pushLine(`Risk Tier: ${agentResult.tier}`);
-    pushLine(`Recommended Action: ${agentResult.action}`);
-    pushLine(`Decision source: ${modeLabel(agentResult.recommendation_mode)}`);
+    pushLine("Trust Index", "metric", `${agentResult.trust_index}/100`);
+    pushLine("Risk Tier", "metric", agentResult.tier);
+    pushLine("Recommended Action", "metric", agentResult.action);
+    pushLine("Decision source", "metric", modeLabel(agentResult.recommendation_mode));
 
-    pushLine("");
-    pushLine("Reasoning:");
+    pushLine("", "rule");
+    pushLine("Reasoning", "header");
     for (const reason of agentResult.reasons) {
-      pushLine(`  • ${reason}`);
+      pushLine(reason, "default");
     }
-
-    pushLine("");
-    pushLine(DIVIDER, "header");
-    pushLine("✅ Agent decision complete.", "success");
-    pushLine(DIVIDER, "header");
 
     setResult(agentResult);
     setStatus("done");

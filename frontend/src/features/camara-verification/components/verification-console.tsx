@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
 import { useI18n } from "../../../core/i18n";
 import { useCamaraVerification } from "../hooks/use-camara-verification";
 import type { AgentTransactionInput } from "../api/agent-test.api";
+import { AgentConsole } from "./agent-console";
 import "./verification-flow.css";
 
 interface VerificationConsoleProps {
@@ -13,28 +13,11 @@ export function VerificationConsole({ payload }: VerificationConsoleProps) {
 
   const { lines, status, run } = useCamaraVerification();
 
-  const outputRef = useRef<HTMLPreElement>(null);
-
   const isRunning = status === "running";
-
-  useEffect(() => {
-    outputRef.current?.scrollTo({
-      top: outputRef.current.scrollHeight,
-    });
-  }, [lines]);
 
   const handleRun = () => {
     run(payload);
   };
-
-  const statusClass =
-    status === "running"
-      ? "ra-terminal__status--running"
-      : status === "done"
-        ? "ra-terminal__status--done"
-        : status === "error"
-          ? "ra-terminal__status--error"
-          : "";
 
   const statusLabel =
     status === "running"
@@ -77,41 +60,13 @@ export function VerificationConsole({ payload }: VerificationConsoleProps) {
             </button>
           </div>
 
-          <div className="ra-terminal">
-            <div className="ra-terminal__titlebar">
-              <span className="ra-terminal__dots">
-                <span className="ra-terminal__dot ra-terminal__dot--red" />
-                <span className="ra-terminal__dot ra-terminal__dot--yellow" />
-                <span className="ra-terminal__dot ra-terminal__dot--green" />
-              </span>
-              <span className="ra-terminal__title">sendguard-agent-cli</span>
-              <span className={`ra-terminal__status ${statusClass}`}>
-                {status === "idle" ? "Idle" : statusLabel}
-              </span>
-            </div>
-
-            <pre
-              className="ra-terminal__body ra-terminal__body--tall"
-              ref={outputRef}
-              dir="ltr"
-              aria-live="polite"
-            >
-              {lines.length === 0 && (
-                <span className="ra-terminal__line--placeholder">
-                  {t("verification.placeholder")}
-                </span>
-              )}
-
-              {lines.map((line) => (
-                <div
-                  key={line.id}
-                  className={`ra-terminal__line--${line.tone}`}
-                >
-                  {line.text || " "}
-                </div>
-              ))}
-            </pre>
-          </div>
+          <AgentConsole
+            lines={lines}
+            status={status}
+            statusLabel={statusLabel}
+            placeholder={t("verification.placeholder")}
+            tall
+          />
         </div>
 
         <aside className="ra-panel">

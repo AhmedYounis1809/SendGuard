@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useI18n } from "../../../core/i18n";
 import { env } from "../../../core/config/env";
 import { useCamaraVerification } from "../../camara-verification/hooks/use-camara-verification";
+import { AgentConsole } from "../../camara-verification/components/agent-console";
 import { DEMO_SCENARIOS } from "../data/demo-scenarios";
 import type { DemoScenario, ScenarioCategory } from "../types/trust-dashboard.types";
 import { TrustIndexGauge } from "./trust-index-gauge";
@@ -33,11 +34,6 @@ export function DashboardView() {
   const [filter, setFilter] = useState<FilterId>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { lines, status, result, run } = useCamaraVerification();
-  const outputRef = useRef<HTMLPreElement>(null);
-
-  useEffect(() => {
-    outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight });
-  }, [lines]);
 
   const isRunning = status === "running";
 
@@ -61,15 +57,6 @@ export function DashboardView() {
   };
 
   const activeScenario = DEMO_SCENARIOS.find((s) => s.id === activeId) ?? null;
-
-  const statusClass =
-    status === "running"
-      ? "ra-terminal__status--running"
-      : status === "done"
-        ? "ra-terminal__status--done"
-        : status === "error"
-          ? "ra-terminal__status--error"
-          : "";
 
   const decisionTier = result?.tier ?? null;
   const decisionModifier = decisionTier ? DECISION_MODIFIER[decisionTier] : null;
@@ -220,32 +207,7 @@ export function DashboardView() {
                 </div>
               </div>
 
-              <div className="ra-terminal">
-                <div className="ra-terminal__titlebar">
-                  <span className="ra-terminal__dots">
-                    <span className="ra-terminal__dot ra-terminal__dot--red" />
-                    <span className="ra-terminal__dot ra-terminal__dot--yellow" />
-                    <span className="ra-terminal__dot ra-terminal__dot--green" />
-                  </span>
-                  <span className="ra-terminal__title">sendguard-agent-cli</span>
-                  <span className={`ra-terminal__status ${statusClass}`}>
-                    {status === "idle" ? "Idle" : status.toUpperCase()}
-                  </span>
-                </div>
-
-                <pre
-                  className="ra-terminal__body ra-terminal__body--tall"
-                  ref={outputRef}
-                  dir="ltr"
-                  aria-live="polite"
-                >
-                  {lines.map((line) => (
-                    <div key={line.id} className={`ra-terminal__line--${line.tone}`}>
-                      {line.text || " "}
-                    </div>
-                  ))}
-                </pre>
-              </div>
+              <AgentConsole lines={lines} status={status} tall />
             </div>
 
             <aside className="ra-panel">
