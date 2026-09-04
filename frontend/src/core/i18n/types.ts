@@ -46,7 +46,6 @@ export interface TranslationDictionary {
   verification: {
     title: string;
     description: string;
-    phoneNumberNote: string;
     runButton: string;
     runningButton: string;
     statusDone: string;

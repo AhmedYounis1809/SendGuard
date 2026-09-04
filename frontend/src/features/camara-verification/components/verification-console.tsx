@@ -42,11 +42,6 @@ export function VerificationConsole({ payload }: VerificationConsoleProps) {
                 <span className="ra-stage">Stage 2</span>
               </div>
               <p className="ra-card__desc">{t("verification.description")}</p>
-              <p className="ra-card__note">
-                {t("verification.phoneNumberNote", {
-                  phoneNumber: payload.phone_number,
-                })}
-              </p>
             </div>
 
             <button

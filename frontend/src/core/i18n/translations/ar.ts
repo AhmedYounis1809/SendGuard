@@ -48,7 +48,6 @@ export const ar: TranslationDictionary = {
   verification: {
     title: "تقييم مخاطر المعاملة",
     description: "يشغّل التحقق من تبديل الشريحة وتبديل الجهاز والتحقق من الموقع من البداية للنهاية.",
-    phoneNumberNote: "الرقم قيد التحقق: {{phoneNumber}}",
     runButton: "تشغيل التحقق",
     runningButton: "جارٍ التشغيل…",
     statusDone: "تم اجتياز جميع الفحوصات",

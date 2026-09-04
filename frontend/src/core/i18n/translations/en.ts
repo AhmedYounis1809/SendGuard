@@ -48,7 +48,6 @@ export const en: TranslationDictionary = {
   verification: {
     title: "Transaction Risk Assessment",
     description: "Runs SIM Swap, Device Swap, and Location Verification end-to-end.",
-    phoneNumberNote: "Verifying number: {{phoneNumber}}",
     runButton: "Run Verification",
     runningButton: "Running…",
     statusDone: "All checks passed",
