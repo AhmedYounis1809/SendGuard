@@ -84,4 +84,32 @@ export interface TranslationDictionary {
       TEMPORARY_FREEZE: string;
     };
   };
+  fallbackChain: {
+    title: string;
+    status: {
+      degraded: string;
+      nominal: string;
+    };
+    stage: {
+      investigation: string;
+      recommendation: string;
+    };
+    tierState: {
+      active: string;
+      failed: string;
+      unused: string;
+      bypassed: string;
+    };
+    reason: {
+      unattributed: string;
+      causes: {
+        rate_limited: string;
+        unavailable: string;
+        auth: string;
+        timeout: string;
+        not_configured: string;
+        unknown: string;
+      };
+    };
+  };
 }

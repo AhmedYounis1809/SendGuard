@@ -86,4 +86,33 @@ export const ar: TranslationDictionary = {
       TEMPORARY_FREEZE: "تجميد مؤقت",
     },
   },
+  fallbackChain: {
+    title: "مرونة المحرك",
+    status: {
+      degraded: "متدهور",
+      nominal: "طبيعي",
+    },
+    stage: {
+      investigation: "التحقيق",
+      recommendation: "التوصية",
+    },
+    tierState: {
+      active: "أنتج النتيجة",
+      failed: "فشل — انتقلت السلسلة للمرحلة التالية",
+      unused: "لم يتم الوصول إليه",
+      bypassed: "تم تخطيه بواسطة السياسة",
+    },
+    reason: {
+      unattributed:
+        "تراجعت هذه المرحلة أيضًا، لكن الخادم يُرجع سببًا واحدًا فقط في كل مرة — راجع مرحلة التحقيق أعلاه.",
+      causes: {
+        rate_limited: "{{service}} تجاوز الحد المسموح به من الطلبات",
+        unavailable: "{{service}} غير متاح مؤقتًا بسبب ضغط الطلبات",
+        auth: "{{service}} غير مُعدّ بشكل صحيح (مفتاح API مفقود أو غير صالح)",
+        timeout: "استغرق {{service}} وقتًا طويلاً للاستجابة",
+        not_configured: "{{service}} غير مُهيأ في هذه البيئة",
+        unknown: "أعاد {{service}} خطأ غير متوقع",
+      },
+    },
+  },
 };

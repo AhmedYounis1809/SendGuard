@@ -88,4 +88,33 @@ export const en: TranslationDictionary = {
       TEMPORARY_FREEZE: "Temporary Freeze",
     },
   },
+  fallbackChain: {
+    title: "Engine Resilience",
+    status: {
+      degraded: "Degraded",
+      nominal: "Nominal",
+    },
+    stage: {
+      investigation: "Investigation",
+      recommendation: "Recommendation",
+    },
+    tierState: {
+      active: "produced the result",
+      failed: "failed — chain moved on",
+      unused: "not reached",
+      bypassed: "skipped by policy",
+    },
+    reason: {
+      unattributed:
+        "Also fell back for this run, but the server only reports one reason at a time — see Investigation above.",
+      causes: {
+        rate_limited: "{{service}} hit its rate limit",
+        unavailable: "{{service}} is temporarily overloaded by high demand",
+        auth: "{{service}} isn't configured correctly (missing or invalid API key)",
+        timeout: "{{service}} took too long to respond",
+        not_configured: "{{service}} isn't set up in this environment",
+        unknown: "{{service}} returned an unexpected error",
+      },
+    },
+  },
 };

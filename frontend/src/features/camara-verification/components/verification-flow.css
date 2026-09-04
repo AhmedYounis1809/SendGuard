@@ -636,6 +636,16 @@
   text-align: end;
 }
 
+/* Flags a degraded engine right on its metric value, so it's visible
+   without reading the explanation line underneath. */
+.ra-line__value--warn {
+  color: var(--color-warning);
+}
+
+.ra-line__value--danger {
+  color: var(--color-danger);
+}
+
 .ra-line__rule {
   height: 1px;
   margin: 0.85rem 0 0.15rem;
@@ -925,18 +935,20 @@
   font-style: italic;
 }
 
-.fc__reason {
-  margin: 0.6rem 0 0;
-  padding-top: 0.55rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+/* Sits directly under the stage row it explains, rather than one shared
+   blurb at the bottom of the panel — each entry is already a short,
+   classified sentence (see lib/fallback-reason.ts), not the raw provider
+   payload, so no line-clamp is needed here. */
+.fc-row__reason {
+  margin: 0.15rem 0 0;
   font-family: var(--font-mono);
   font-size: 0.66rem;
   line-height: 1.5;
   color: var(--color-warning);
-  /* Provider errors can be very long; keep the panel from blowing out. */
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   word-break: break-word;
+}
+
+.fc-row__reason--muted {
+  color: #8ba3b4;
+  font-style: italic;
 }

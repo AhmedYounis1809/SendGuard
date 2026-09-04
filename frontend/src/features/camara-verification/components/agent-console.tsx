@@ -99,7 +99,13 @@ export function AgentConsole({
               <div key={line.id} className="ra-line ra-line--metric">
                 <span className="ra-line__label">{line.text}</span>
                 <span className="ra-line__dots" aria-hidden="true" />
-                <span className="ra-line__value">{line.value}</span>
+                <span
+                  className={`ra-line__value ${
+                    line.valueTone ? `ra-line__value--${line.valueTone}` : ""
+                  }`}
+                >
+                  {line.value}
+                </span>
               </div>
             );
           }

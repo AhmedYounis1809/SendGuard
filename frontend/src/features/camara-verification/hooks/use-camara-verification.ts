@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { useI18n } from "../../../core/i18n";
 import { AgentApiError, runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
-import { isDegraded, modeLabel } from "../lib/agent-modes";
+import { modeLabel, type AgentMode } from "../lib/agent-modes";
+import { attributeFallbackReason, type ServiceFailure } from "../lib/fallback-reason";
 
 export type ConsoleLineTone =
   | "default"
@@ -13,12 +14,17 @@ export type ConsoleLineTone =
   | "metric"
   | "rule";
 
+/** Colors a metric's value in-line so a degraded engine is visible without
+ * reading the explanation line below it. */
+export type MetricValueTone = "warn" | "danger";
+
 export interface ConsoleLine {
   id: number;
   text: string;
   tone: ConsoleLineTone;
   /** When set, the line renders as an aligned label/value row. */
   value?: string;
+  valueTone?: MetricValueTone;
 }
 
 export type VerificationStatus = "idle" | "running" | "done" | "error";
@@ -36,6 +42,28 @@ function describeSignal(tool: string, data: Record<string, unknown> | undefined)
   return `hours_since_swap=${data.hours_since_swap}`;
 }
 
+/** Deterministic-only-option is a normal policy outcome (see agent-modes.ts),
+ * not a failure, so it stays the default color — only genuine fallbacks
+ * are flagged. */
+function engineValueTone(mode: AgentMode | string): MetricValueTone | undefined {
+  if (mode === "AI_GROQ_FALLBACK") return "warn";
+  if (mode === "DETERMINISTIC_FALLBACK") return "danger";
+  return undefined;
+}
+
+function pushServiceFailures(
+  push: (text: string, tone?: ConsoleLineTone) => void,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  failures: ServiceFailure[],
+) {
+  for (const failure of failures) {
+    push(
+      t(`fallbackChain.reason.causes.${failure.cause}`, { service: failure.service }),
+      "error",
+    );
+  }
+}
+
 export function useCamaraVerification() {
   const { t } = useI18n();
   const [lines, setLines] = useState<ConsoleLine[]>([]);
@@ -47,8 +75,13 @@ export function useCamaraVerification() {
   // updaters (a ref-based counter read here previously caused colliding
   // ids and "duplicate key" warnings under the double invoke).
   const pushLine = useCallback(
-    (text: string, tone: ConsoleLineTone = "default", value?: string) => {
-      setLines((prev) => [...prev, { id: prev.length + 1, text, tone, value }]);
+    (
+      text: string,
+      tone: ConsoleLineTone = "default",
+      value?: string,
+      valueTone?: MetricValueTone,
+    ) => {
+      setLines((prev) => [...prev, { id: prev.length + 1, text, tone, value, valueTone }]);
     },
     [],
   );
@@ -75,10 +108,19 @@ export function useCamaraVerification() {
       return;
     }
 
-    pushLine("Investigation engine", "metric", modeLabel(agentResult.agent_mode));
-    if (isDegraded(agentResult.agent_mode)) {
-      pushLine("primary engine unavailable — fell back", "error");
-    }
+    const attribution = attributeFallbackReason(
+      agentResult.agent_mode,
+      agentResult.recommendation_mode,
+      agentResult.fallback_reason,
+    );
+
+    pushLine(
+      "Investigation engine",
+      "metric",
+      modeLabel(agentResult.agent_mode),
+      engineValueTone(agentResult.agent_mode),
+    );
+    pushServiceFailures(pushLine, t, attribution.investigation);
 
     const totalChecked = SIGNAL_STEPS.filter((s) =>
       agentResult.signals_checked.includes(s.tool),
@@ -107,13 +149,15 @@ export function useCamaraVerification() {
     pushLine("Trust Index", "metric", `${agentResult.trust_index}/100`);
     pushLine("Risk Tier", "metric", agentResult.tier);
     pushLine("Recommended Action", "metric", agentResult.action);
-    pushLine("Decision engine", "metric", modeLabel(agentResult.recommendation_mode));
-    if (isDegraded(agentResult.recommendation_mode)) {
-      pushLine("primary engine unavailable — fell back", "error");
-    }
-
-    if (agentResult.fallback_reason) {
-      pushLine(agentResult.fallback_reason, "muted");
+    pushLine(
+      "Decision engine",
+      "metric",
+      modeLabel(agentResult.recommendation_mode),
+      engineValueTone(agentResult.recommendation_mode),
+    );
+    pushServiceFailures(pushLine, t, attribution.recommendation);
+    if (attribution.recommendationReasonLost) {
+      pushLine(t("fallbackChain.reason.unattributed"), "muted");
     }
 
     pushLine("", "rule");
