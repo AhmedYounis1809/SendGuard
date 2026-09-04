@@ -2,6 +2,7 @@ import { useI18n } from "../../../core/i18n";
 import { useCamaraVerification } from "../hooks/use-camara-verification";
 import type { AgentTransactionInput } from "../api/agent-test.api";
 import { AgentConsole } from "./agent-console";
+import { FallbackChain } from "./fallback-chain";
 import "./verification-flow.css";
 
 interface VerificationConsoleProps {
@@ -11,7 +12,7 @@ interface VerificationConsoleProps {
 export function VerificationConsole({ payload }: VerificationConsoleProps) {
   const { t } = useI18n();
 
-  const { lines, status, run } = useCamaraVerification();
+  const { lines, status, result, run } = useCamaraVerification();
 
   const isRunning = status === "running";
 
@@ -143,6 +144,14 @@ export function VerificationConsole({ payload }: VerificationConsoleProps) {
               </span>
             </div>
           </div>
+
+          {result && (
+            <FallbackChain
+              investigationMode={result.agent_mode}
+              recommendationMode={result.recommendation_mode}
+              fallbackReason={result.fallback_reason}
+            />
+          )}
         </aside>
       </div>
     </div>

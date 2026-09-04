@@ -3,6 +3,7 @@ import { useI18n } from "../../../core/i18n";
 import { env } from "../../../core/config/env";
 import { useCamaraVerification } from "../../camara-verification/hooks/use-camara-verification";
 import { AgentConsole } from "../../camara-verification/components/agent-console";
+import { FallbackChain } from "../../camara-verification/components/fallback-chain";
 import { DEMO_SCENARIOS } from "../data/demo-scenarios";
 import type { DemoScenario, ScenarioCategory } from "../types/trust-dashboard.types";
 import { TrustIndexGauge } from "./trust-index-gauge";
@@ -236,6 +237,14 @@ export function DashboardView() {
                     </div>
                   ))}
                 </div>
+              )}
+
+              {result && (
+                <FallbackChain
+                  investigationMode={result.agent_mode}
+                  recommendationMode={result.recommendation_mode}
+                  fallbackReason={result.fallback_reason}
+                />
               )}
             </aside>
           </div>

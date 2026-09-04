@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useI18n } from "../../../core/i18n";
 import { AgentApiError, runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
+import { isDegraded, modeLabel } from "../lib/agent-modes";
 
 export type ConsoleLineTone =
   | "default"
@@ -33,14 +34,6 @@ function describeSignal(tool: string, data: Record<string, unknown> | undefined)
   if (data.degraded) return `error: ${data.error ?? "unknown"}`;
   if (tool === "check_location_tool") return `verificationResult=${data.verification_result}`;
   return `hours_since_swap=${data.hours_since_swap}`;
-}
-
-function modeLabel(mode: string): string {
-  if (mode === "AI_GEMINI") return "Gemini (primary)";
-  if (mode === "AI_GROQ_FALLBACK") return "Groq (fallback)";
-  if (mode === "DETERMINISTIC_FALLBACK") return "Deterministic (no LLM available)";
-  if (mode === "DETERMINISTIC_ONLY_OPTION") return "Deterministic (only option for this tier)";
-  return mode;
 }
 
 export function useCamaraVerification() {
@@ -82,9 +75,9 @@ export function useCamaraVerification() {
       return;
     }
 
-    pushLine("Signal source", "metric", modeLabel(agentResult.agent_mode));
-    if (agentResult.fallback_reason) {
-      pushLine(`fallback reason: ${agentResult.fallback_reason}`, "muted");
+    pushLine("Investigation engine", "metric", modeLabel(agentResult.agent_mode));
+    if (isDegraded(agentResult.agent_mode)) {
+      pushLine("primary engine unavailable — fell back", "error");
     }
 
     const totalChecked = SIGNAL_STEPS.filter((s) =>
@@ -114,7 +107,14 @@ export function useCamaraVerification() {
     pushLine("Trust Index", "metric", `${agentResult.trust_index}/100`);
     pushLine("Risk Tier", "metric", agentResult.tier);
     pushLine("Recommended Action", "metric", agentResult.action);
-    pushLine("Decision source", "metric", modeLabel(agentResult.recommendation_mode));
+    pushLine("Decision engine", "metric", modeLabel(agentResult.recommendation_mode));
+    if (isDegraded(agentResult.recommendation_mode)) {
+      pushLine("primary engine unavailable — fell back", "error");
+    }
+
+    if (agentResult.fallback_reason) {
+      pushLine(agentResult.fallback_reason, "muted");
+    }
 
     pushLine("", "rule");
     pushLine("Reasoning", "header");
