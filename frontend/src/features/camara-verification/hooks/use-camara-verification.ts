@@ -1,17 +1,33 @@
-import { useCallback, useRef, useState } from "react";
-import { runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
+import { useCallback, useState } from "react";
+import { useI18n } from "../../../core/i18n";
+import { AgentApiError, runAgentTest, type AgentTestResult, type AgentTransactionInput } from "../api/agent-test.api";
+import { modeLabel, type AgentMode } from "../lib/agent-modes";
+import { attributeFallbackReason, type ServiceFailure } from "../lib/fallback-reason";
 
-export type ConsoleLineTone = "default" | "success" | "error" | "header";
+export type ConsoleLineTone =
+  | "default"
+  | "success"
+  | "error"
+  | "header"
+  | "step"
+  | "muted"
+  | "metric"
+  | "rule";
+
+/** Colors a metric's value in-line so a degraded engine is visible without
+ * reading the explanation line below it. */
+export type MetricValueTone = "warn" | "danger";
 
 export interface ConsoleLine {
   id: number;
   text: string;
   tone: ConsoleLineTone;
+  /** When set, the line renders as an aligned label/value row. */
+  value?: string;
+  valueTone?: MetricValueTone;
 }
 
 export type VerificationStatus = "idle" | "running" | "done" | "error";
-
-const DIVIDER = "=".repeat(60);
 
 const SIGNAL_STEPS: { tool: string; label: string }[] = [
   { tool: "check_sim_swap_tool", label: "SIM Swap" },
@@ -26,53 +42,89 @@ function describeSignal(tool: string, data: Record<string, unknown> | undefined)
   return `hours_since_swap=${data.hours_since_swap}`;
 }
 
-function modeLabel(mode: string): string {
-  if (mode === "AI_GEMINI") return "🟢 Gemini (primary)";
-  if (mode === "AI_GROQ_FALLBACK") return "🟡 Groq (fallback)";
-  if (mode === "DETERMINISTIC_FALLBACK") return "🔴 Deterministic (no LLM available)";
-  if (mode === "DETERMINISTIC_ONLY_OPTION") return "⚪ Deterministic (only option for this tier)";
-  return mode;
+/** Deterministic-only-option is a normal policy outcome (see agent-modes.ts),
+ * not a failure, so it stays the default color — only genuine fallbacks
+ * are flagged. */
+function engineValueTone(mode: AgentMode | string): MetricValueTone | undefined {
+  if (mode === "AI_GROQ_FALLBACK") return "warn";
+  if (mode === "DETERMINISTIC_FALLBACK") return "danger";
+  return undefined;
+}
+
+function pushServiceFailures(
+  push: (text: string, tone?: ConsoleLineTone) => void,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  failures: ServiceFailure[],
+) {
+  for (const failure of failures) {
+    push(
+      t(`fallbackChain.reason.causes.${failure.cause}`, { service: failure.service }),
+      "error",
+    );
+  }
 }
 
 export function useCamaraVerification() {
+  const { t } = useI18n();
   const [lines, setLines] = useState<ConsoleLine[]>([]);
   const [status, setStatus] = useState<VerificationStatus>("idle");
-  const nextLineId = useRef(0);
+  const [result, setResult] = useState<AgentTestResult | null>(null);
 
-  const pushLine = useCallback((text: string, tone: ConsoleLineTone = "default") => {
-    nextLineId.current += 1;
-    setLines((prev) => [...prev, { id: nextLineId.current, text, tone }]);
-  }, []);
+  // Derives the next id purely from `prev` — no external mutable counter —
+  // so this stays safe under Strict Mode's double-invocation of state
+  // updaters (a ref-based counter read here previously caused colliding
+  // ids and "duplicate key" warnings under the double invoke).
+  const pushLine = useCallback(
+    (
+      text: string,
+      tone: ConsoleLineTone = "default",
+      value?: string,
+      valueTone?: MetricValueTone,
+    ) => {
+      setLines((prev) => [...prev, { id: prev.length + 1, text, tone, value, valueTone }]);
+    },
+    [],
+  );
 
   const run = useCallback(async (payload: AgentTransactionInput) => {
     setLines([]);
-    nextLineId.current = 0;
+    setResult(null);
     setStatus("running");
 
-    pushLine(DIVIDER, "header");
-    pushLine("SendGuard — Running AI Agent", "header");
-    pushLine(DIVIDER, "header");
-    pushLine("");
-    pushLine("⏳ Running agent, please wait — this can take up to a minute (Gemini, and a fallback provider if needed)...");
+    pushLine("Gathering evidence", "header");
 
     let agentResult: AgentTestResult;
     try {
       agentResult = await runAgentTest(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unexpected error";
-      pushLine("");
-      pushLine(`❌ ${message}`, "error");
+      const message =
+        error instanceof AgentApiError
+          ? t(error.i18nKey, error.i18nParams)
+          : error instanceof Error
+            ? error.message
+            : "Unexpected error";
+      pushLine(message, "error");
       setStatus("error");
       return;
     }
 
-    pushLine("");
-    pushLine(`Signal source: ${modeLabel(agentResult.agent_mode)}`);
-    if (agentResult.fallback_reason) {
-      pushLine(`  (fallback reason: ${agentResult.fallback_reason})`);
-    }
+    const attribution = attributeFallbackReason(
+      agentResult.agent_mode,
+      agentResult.recommendation_mode,
+      agentResult.fallback_reason,
+    );
 
-    const totalChecked = SIGNAL_STEPS.filter((s) => agentResult.signals_checked.includes(s.tool)).length;
+    pushLine(
+      "Investigation engine",
+      "metric",
+      modeLabel(agentResult.agent_mode),
+      engineValueTone(agentResult.agent_mode),
+    );
+    pushServiceFailures(pushLine, t, attribution.investigation);
+
+    const totalChecked = SIGNAL_STEPS.filter((s) =>
+      agentResult.signals_checked.includes(s.tool),
+    ).length;
     let stepNum = 0;
 
     for (const { tool, label } of SIGNAL_STEPS) {
@@ -81,42 +133,42 @@ export function useCamaraVerification() {
 
       if (wasChecked) {
         stepNum += 1;
-        pushLine("");
-        pushLine(`[${stepNum}/${totalChecked}] Checking ${label}...`);
+        pushLine(`[${stepNum}/${totalChecked}] ${label}`, "step");
         const data = agentResult.raw_signals[tool];
         const degraded = Boolean(data?.degraded);
         const detail = describeSignal(tool, data);
-        pushLine(degraded ? `  ❌ FAILED: ${detail}` : `  ✅ PASSED — ${detail}`, degraded ? "error" : "success");
+        pushLine(detail, degraded ? "error" : "success");
       } else if (wasSkipped) {
-        pushLine("");
-        pushLine(`${label}: skipped by the agent (not needed for this transaction)`);
+        pushLine(`${label} — skipped (not needed for this transaction)`, "muted");
       }
     }
 
-    pushLine("");
-    pushLine(DIVIDER, "header");
-    pushLine("Evidence gathering complete.", "success");
-    pushLine(DIVIDER, "header");
+    pushLine("", "rule");
+    pushLine("Decision", "header");
 
-    pushLine("");
-    pushLine(`Trust Index: ${agentResult.trust_index}/100`);
-    pushLine(`Risk Tier: ${agentResult.tier}`);
-    pushLine(`Recommended Action: ${agentResult.action}`);
-    pushLine(`Decision source: ${modeLabel(agentResult.recommendation_mode)}`);
-
-    pushLine("");
-    pushLine("Reasoning:");
-    for (const reason of agentResult.reasons) {
-      pushLine(`  • ${reason}`);
+    pushLine("Trust Index", "metric", `${agentResult.trust_index}/100`);
+    pushLine("Risk Tier", "metric", agentResult.tier);
+    pushLine("Recommended Action", "metric", agentResult.action);
+    pushLine(
+      "Decision engine",
+      "metric",
+      modeLabel(agentResult.recommendation_mode),
+      engineValueTone(agentResult.recommendation_mode),
+    );
+    pushServiceFailures(pushLine, t, attribution.recommendation);
+    if (attribution.recommendationReasonLost) {
+      pushLine(t("fallbackChain.reason.unattributed"), "muted");
     }
 
-    pushLine("");
-    pushLine(DIVIDER, "header");
-    pushLine("✅ Agent decision complete.", "success");
-    pushLine(DIVIDER, "header");
+    pushLine("", "rule");
+    pushLine("Reasoning", "header");
+    for (const reason of agentResult.reasons) {
+      pushLine(reason, "default");
+    }
 
+    setResult(agentResult);
     setStatus("done");
-  }, [pushLine]);
+  }, [pushLine, t]);
 
-  return { lines, status, run };
+  return { lines, status, result, run };
 }

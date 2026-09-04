@@ -27,7 +27,7 @@ from app.camara.location_verification import verify_location
 SIMULATOR_NUMBER = "+99999991000"
 
 print("=" * 60)
-print("SendGuard — CAMARA API Verification")
+print("SendGuard — Transaction Risk Assessment")
 print("=" * 60)
 
 print("\n[1/3] Testing SIM Swap...")

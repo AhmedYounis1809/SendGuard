@@ -35,7 +35,14 @@ function App() {
         <p>{t("app.subtitle")}</p>
       </header>
 
-      <main className="app-shell__main">
+      <main
+        className={
+          view === "verification" || view === "dashboard"
+            ? "app-shell__main app-shell__main--wide"
+            : "app-shell__main"
+        }
+      >
+
         {view === "landing" && (
           <section className="landing">
             <p className="landing__line">{t("landing.problem")}</p>

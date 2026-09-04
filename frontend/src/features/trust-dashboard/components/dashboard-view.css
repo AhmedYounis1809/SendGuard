@@ -4,17 +4,71 @@
   gap: 1.5rem;
 }
 
-.dashboard-view__intro h2 {
-  font-size: 1.15rem;
-  margin-bottom: 0.35rem;
+.dash-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.dashboard-view__intro p {
+.dash-header__title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dash-header__title-row h1 {
+  font-size: 1.75rem;
+}
+
+.dash-header__count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.35);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.dash-header__desc {
   margin: 0;
   color: #9fb3c2;
   font-family: var(--font-body);
-  font-size: 0.875rem;
-  max-width: 480px;
+  font-size: 0.9rem;
+  max-width: 620px;
+}
+
+.dash-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dash-filter {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #9fb3c2;
+  background: var(--color-secondary-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.dash-filter:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  color: var(--color-neutral);
+}
+
+.dash-filter--active {
+  color: var(--color-tertiary);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 .dashboard-view__placeholder {
@@ -23,141 +77,241 @@
   font-size: 0.85rem;
 }
 
-.dashboard-view__result {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
+/* Receipt cards — one per demo scenario. Each is a self-contained fake
+   transaction receipt (sender/recipient/context) that, on click, runs
+   that scenario's transaction context against the real agent. */
 
-/* Scenario Selector */
-
-.scenario-selector {
+.receipt-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
 }
 
-.scenario-selector__item {
+@media (max-width: 900px) {
+  .receipt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .receipt-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.receipt-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
+  gap: 0.6rem;
   text-align: start;
   background: var(--color-secondary-light);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  padding: 0.9rem 1.1rem;
-  cursor: pointer;
+  padding: 1.1rem 1.2rem;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.scenario-selector__item:hover:not(:disabled) {
+.receipt-card:hover {
   border-color: rgba(var(--color-primary-rgb), 0.5);
   transform: translateY(-1px);
 }
 
-.scenario-selector__item:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.scenario-selector__item--active {
+.receipt-card--active {
   border-color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.1);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
-.scenario-selector__name {
+.receipt-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.receipt-card__title {
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--color-neutral);
 }
 
-.scenario-selector__desc {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  color: #9fb3c2;
-  line-height: 1.4;
-}
-
-/* Signal Panel */
-
-.signal-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 0.75rem;
-}
-
-.signal-card {
-  background: var(--color-secondary-light);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 0.9rem 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  opacity: 0.45;
-  transform: translateY(4px);
-  transition: opacity 0.35s ease, transform 0.35s ease, border-color 0.35s ease, background 0.35s ease;
-}
-
-.signal-card--revealed {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.signal-card--pass {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.06);
-}
-
-.signal-card--fail {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.06);
-}
-
-.signal-card__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.signal-card__name {
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--color-neutral);
-}
-
-.signal-card__badge {
+.receipt-card__amount {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  color: #9fb3c2;
-  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.75rem;
+  color: var(--color-primary);
   white-space: nowrap;
 }
 
-.signal-card--pass .signal-card__badge {
-  color: var(--color-tertiary);
-  background: rgba(16, 185, 129, 0.15);
-}
-
-.signal-card--fail .signal-card__badge {
-  color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.15);
-}
-
-.signal-card__detail {
+.receipt-card__summary {
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.75rem;
   color: #9fb3c2;
   line-height: 1.4;
+}
+
+.receipt-card__rows {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-top: 0.5rem;
+}
+
+.receipt-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.18rem 0;
+}
+
+.receipt-card__row span:first-child {
+  color: #6ea8c4;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.receipt-card__row span:last-child {
+  color: var(--color-neutral);
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-card__value--safe {
+  color: var(--color-tertiary) !important;
+}
+
+.receipt-card__value--warn {
+  color: var(--color-warning) !important;
+}
+
+.receipt-card__value--danger {
+  color: var(--color-danger) !important;
+  font-weight: 700;
+}
+
+.receipt-card__value--muted {
+  color: #6b8494 !important;
+  font-style: italic;
+}
+
+.receipt-card__run-btn {
+  margin-top: 0.5rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--color-neutral);
+  background: transparent;
+  border-inline: none;
+  border-bottom: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.receipt-card__run-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+}
+
+.receipt-card__run-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Risk chip — narrative-only framing for the demo card, not a real
+   decision (that only exists once the agent has actually run). */
+
+.risk-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.risk-chip__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.risk-chip--low {
+  color: var(--color-tertiary);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.risk-chip--medium {
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.risk-chip--elevated {
+  color: #e08a3c;
+  background: rgba(224, 138, 60, 0.14);
+  border-color: rgba(224, 138, 60, 0.35);
+}
+
+.risk-chip--high {
+  color: #e0637c;
+  background: rgba(224, 99, 124, 0.14);
+  border-color: rgba(224, 99, 124, 0.35);
+}
+
+.risk-chip--critical {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Decision pill (reuses the tier vocabulary from dashboard.decisions.*) */
+
+.dash-pill {
+  align-self: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.dash-pill--allow {
+  color: var(--color-tertiary);
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.dash-pill--adaptive {
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+}
+
+.dash-pill--hold {
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.dash-pill--freeze {
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 /* Trust Index Gauge */
@@ -166,7 +320,7 @@
   align-self: center;
   position: relative;
   width: 100%;
-  max-width: 280px;
+  max-width: 220px;
 }
 
 .trust-gauge__svg {
@@ -202,7 +356,7 @@
 
 .trust-gauge__number {
   font-family: var(--font-headline);
-  font-size: 2.25rem;
+  font-size: 2rem;
   font-weight: 900;
   line-height: 1;
   transition: color 0.4s ease;
@@ -214,119 +368,4 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #6ea8c4;
-}
-
-/* Decision Card */
-
-@keyframes decision-card-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.decision-card {
-  background: var(--color-secondary-light);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.1rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-}
-
-.decision-card--reveal {
-  animation: decision-card-reveal 0.4s ease;
-}
-
-.decision-card__pill {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 1rem;
-  padding: 0.5rem 1.25rem;
-  border-radius: 999px;
-  border: 1px solid transparent;
-}
-
-.decision-card__pill--allow {
-  color: var(--color-tertiary);
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-.decision-card__pill--adaptive {
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.15);
-  border-color: rgba(var(--color-primary-rgb), 0.4);
-}
-
-.decision-card__pill--hold {
-  color: var(--color-warning);
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
-}
-
-.decision-card__pill--freeze {
-  color: var(--color-danger);
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-}
-
-.decision-card__reasons {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.decision-card__reasons-title {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #6ea8c4;
-}
-
-.decision-card__reasons ul {
-  margin: 0;
-  padding-inline-start: 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.decision-card__reasons li {
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--color-neutral);
-  line-height: 1.5;
-}
-
-.decision-card__verify-btn {
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--color-secondary);
-  background: var(--color-primary);
-  border: none;
-  border-radius: 10px;
-  padding: 0.7rem 1.5rem;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.decision-card__verify-btn:hover:not(:disabled) {
-  background: var(--color-tertiary);
-  transform: translateY(-1px);
-}
-
-.decision-card__verify-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
