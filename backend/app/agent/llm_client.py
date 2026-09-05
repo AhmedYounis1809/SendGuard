@@ -51,32 +51,21 @@ def _get_groq_client():
 def _gemini_investigate(transaction_context, available_tools, tool_map, rejection_check_fn, max_rounds=4) -> dict:
     client = _get_gemini_client()
     prompt = f"""You are a fraud-risk INVESTIGATION agent for a financial
-transaction security system called SendGuard. Transaction context be perfect :
+transaction security system called SendGuard. Transaction context:
 
 {transaction_context}
 
-You have tools to gather network-based evidence.
+You have tools to gather network-based evidence. Call one or more tools,
+look at the result, and decide whether more evidence is needed. Be
+thorough for large transactions or new beneficiaries; a small routine
+transaction may need less checking.
 
-Investigation policy:
+Only request the location check if `location_reference_available` is true
+in the context above — it will be rejected otherwise. Never request a tool
+already successfully checked in this conversation.
 
-1. Always check SIM Swap for every transaction.
-2. Always check Device Swap for every transaction.
-3. If `location_reference_available` is true, check Location Verification
-   when ANY of the following is true:
-   - transaction amount >= 30000 EGP
-   - `is_new_beneficiary` is true
-   - SIM Swap indicates a recent change
-   - Device Swap indicates a recent change
-   - the transaction shows unusually high activity
-4. If none of the above conditions apply, Location Verification is optional.
-5. Never request Location Verification when
-   `location_reference_available` is false.
-6. Never request a tool that was already successfully checked.
-7. After receiving a tool result, inspect it before deciding whether another
-   tool is needed.
-
-For high-value, new-beneficiary, or suspicious transactions, be thorough
-and gather all relevant available evidence.."""
+You gather EVIDENCE ONLY — you do not calculate risk scores or make the
+final decision. Once you have sufficient evidence, stop calling tools."""
 
     contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     collected_signals: dict = {}
@@ -146,41 +135,13 @@ GROQ_INVESTIGATION_TOOLS_SCHEMA = [
 
 def _groq_investigate(transaction_context, tool_map, rejection_check_fn) -> dict:
     client = _get_groq_client()
-    prompt = f"""You are the SendGuard fraud-risk INVESTIGATION agent.
-
-A financial transaction is about to be processed be perfect:
+    prompt = f"""You are a fraud-risk investigation agent. Transaction context:
 
 {transaction_context}
 
-Your job is to gather the most relevant network-based evidence using the
-available tools. You are an investigation agent, not the final risk
-decision-maker.
-
-Follow this investigation policy:
-
-1. Always check SIM Swap for every transaction.
-
-2. Always check Device Swap for every transaction.
-
-3. Check Location Verification when
-   `location_reference_available` is true AND at least one of these is true:
-   - transaction amount >= 30000 EGP
-   - `is_new_beneficiary` is true
-   - recent SIM Swap is detected
-   - recent Device Swap is detected
-   - `recent_transaction_count_10min` >= 3
-
-4. Never request Location Verification when
-   `location_reference_available` is false.
-
-5. Never request a tool that has already been successfully checked.
-
-6. After receiving tool results, use that evidence to determine whether
-   another available tool is necessary.
-
-7. For high-value, new-beneficiary, or suspicious transactions, gather
-   all relevant available evidence.
-"""
+Call whichever available tools are worth checking (SIM swap and device
+swap are cheap and valuable for most non-trivial transactions; only call
+location if location_reference_available is true)."""
 
     response = client.chat.completions.create(
         model=GROQ_MODEL,
@@ -264,47 +225,20 @@ def investigate_transaction(transaction_context, available_tools, tool_map, reje
 # RECOMMENDATION
 # ===========================================================================
 
-def _build_action_prompt(
-    tier,
-    transaction_context,
-    degraded_signals,
-    reasons,
-    allowed,
-) -> str:
+def _build_action_prompt(tier, transaction_context, degraded_signals, reasons, allowed) -> str:
+    return f"""A transaction has been assessed at risk tier: {tier}
 
-    trusted_device_available = transaction_context.get(
-        "trusted_device_available",
-        False,
-    )
+Evidence gathered:
+{chr(10).join(f"- {r}" for r in reasons) if reasons else "- (no specific evidence recorded)"}
 
-    return f"""You are the SendGuard AI security decision agent.
+Degraded/unavailable signals: {degraded_signals or "none"}
+Trusted previous device available: {transaction_context.get("trusted_device_available", False)}
 
-The deterministic Trust Engine has already assessed the transaction.
+Allowed actions for this tier: {allowed}
 
-Risk tier:
-{tier}
-
-Evidence:
-{chr(10).join(f"- {r}" for r in reasons) if reasons else "- none"}
-
-Degraded signals:
-{degraded_signals or "none"}
-
-Trusted previous device available:
-{trusted_device_available}
-
-The following are the ONLY actions available for this transaction:
-{allowed}
-
-Choose the MOST APPROPRIATE action based on the evidence and transaction
-context.
-
-You are responsible for choosing the action.
-Python only enforces the safety boundary and validates your choice.
-
-Do not invent a new action.
-Do not choose an action outside the provided allowed actions.
-"""
+Choose the option that best fits this evidence. A trusted device channel
+is generally stronger than a same-device confirmation; prefer the more
+cautious option if signals are degraded."""
 
 
 def _gemini_choose_action(tier, transaction_context, degraded_signals, reasons, allowed) -> str:
@@ -399,4 +333,3 @@ def choose_action(tier, transaction_context, degraded_signals, reasons, allowed_
     action = _deterministic_choose_action(tier, transaction_context)
     print("[SendGuard][LLM] Recommendation SOURCE = DETERMINISTIC (no LLM available)")
     return action, "DETERMINISTIC_FALLBACK", f"Gemini failed: {gemini_error} | Groq failed: {groq_error}"
-    

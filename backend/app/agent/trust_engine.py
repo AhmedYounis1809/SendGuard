@@ -41,8 +41,9 @@ BASE_TRUST = 90  # optimistic starting point — "innocent until signals say oth
 # device swap together — the classic account-takeover signature).
 
 WEIGHTS = {
-    "location_verified_true": +5,
+    "location_verified_true": +3,
     "location_verified_false": -20,
+    "no_location_reference": -8,  # NEW: cold-start/no-history case — reduced confidence, not a red flag
     "new_beneficiary": -8,
     "frequent_beneficiary": +5,
     "transaction_burst": -15,
@@ -271,4 +272,3 @@ def apply_verification_recovery(
         uncalled_signals=previous_assessment.uncalled_signals,
         reasons=new_reasons,
     )
-    

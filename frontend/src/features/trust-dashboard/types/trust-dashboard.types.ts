@@ -1,4 +1,4 @@
-import type { AgentTransactionInput } from "../../camara-verification/api/agent-test.api";
+import type { AgentTransactionInput } from "../../../core/network/agent-types";
 
 export interface DemoParty {
   name: string;
