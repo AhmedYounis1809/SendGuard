@@ -43,14 +43,14 @@ BASE_TRUST = 90  # optimistic starting point — "innocent until signals say oth
 WEIGHTS = {
     "location_verified_true": +3,
     "location_verified_false": -20,
-    "no_location_reference": -8,  # NEW: cold-start/no-history case — reduced confidence, not a red flag
-    "new_beneficiary": -8,
+    "no_location_reference": -5,  # cold-start/no-history case — reduced confidence, NOT a red flag
+    "new_beneficiary": -10,
     "frequent_beneficiary": +5,
-    "transaction_burst": -15,
+    "transaction_burst": -20,
     "large_amount": -8,
 }
 
-LARGE_AMOUNT_THRESHOLD_EGP = 30000
+LARGE_AMOUNT_THRESHOLD_EGP = 25000
 BURST_TRANSACTION_COUNT_THRESHOLD = 3  # 3+ transactions within the tracked window = burst
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ def _device_swap_weight(hours_since_swap: Optional[float]) -> int:
     if hours_since_swap is None:
         return 0
     if hours_since_swap < 24:
-        return -15
+        return -25
     elif hours_since_swap < 24 * 7:
         return -8
     elif hours_since_swap < 24 * 30:
@@ -200,6 +200,16 @@ def compute_trust(collected_signals: dict, transaction_context: dict) -> TrustAs
         reasons.append(f"Familiar beneficiary ({w:+d})")
     score += w
     contributions["beneficiary_history"] = w
+
+    # No location reference on file is NOT treated as a red flag — it's
+    # simply reduced confidence (less evidence available), consistent with
+    # our Cold Start philosophy. Only applies when the location tool wasn't
+    # even attempted for this exact reason (not e.g. a degraded call).
+    if not transaction_context.get("location_reference_available", False):
+        w = WEIGHTS["no_location_reference"]
+        score += w
+        contributions["location_reference"] = w
+        reasons.append(f"No location reference available ({w:+d})")
 
     burst_count = transaction_context.get("recent_transaction_count_10min", 0)
     if burst_count >= BURST_TRANSACTION_COUNT_THRESHOLD:

@@ -5,7 +5,7 @@ import type { DemoScenario } from "../types/trust-dashboard.types";
 // mock signals returned for a scenario come from the backend's demo-mode
 // injection, not from calling Nokia, so this number is never actually
 // dialed out to for scenario runs.
-const SIMULATOR_PHONE_NUMBER = "+99999991000";
+export const SIMULATOR_PHONE_NUMBER = "+99999991000";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 const TIMEOUT_MS = 120_000;
