@@ -133,42 +133,127 @@ GROQ_INVESTIGATION_TOOLS_SCHEMA = [
 ]
 
 
-def _groq_investigate(transaction_context, tool_map, rejection_check_fn) -> dict:
+def _groq_chat_completion_with_retry(client, max_attempts: int = 2, **kwargs):
+    """
+    Small retry wrapper specific to Groq's strict tool-name validation.
+    Open-weight models (e.g. gpt-oss-20b) occasionally hallucinate a
+    shortened tool name (e.g. "check_device_swap" instead of
+    "check_device_swap_tool"), which Groq's API rejects outright with a
+    400 error BEFORE we ever get a response object — there's no partial
+    result to recover from, only a full exception. A short retry of the
+    exact same request usually recovers on the next generation attempt,
+    without escalating all the way to the deterministic fallback over a
+    single transient naming quirk.
+    """
+    last_exc = None
+    for attempt in range(max_attempts):
+        try:
+            return client.chat.completions.create(**kwargs)
+        except Exception as exc:
+            last_exc = exc
+            msg = str(exc)
+            if "tool_use_failed" in msg or "not in request.tools" in msg:
+                print(f"[SendGuard][LLM] Groq tool-name validation failed (attempt {attempt + 1}/{max_attempts}), retrying...")
+                continue
+            raise
+    raise last_exc
+
+
+def _groq_investigate(transaction_context, tool_map, rejection_check_fn, max_rounds: int = 4) -> dict:
+    """
+    Multi-turn Reason -> Tool -> Reason loop via Groq (OpenAI-compatible
+    chat completions tool calling), mirroring _gemini_investigate's
+    behavior: Groq sees each round's real tool results before deciding
+    whether more evidence is needed, instead of committing to a single
+    upfront batch of tool calls.
+    """
     client = _get_groq_client()
-    prompt = f"""You are a fraud-risk investigation agent. Transaction context:
+    prompt = f"""You are a fraud-risk INVESTIGATION agent for a financial
+transaction security system called SendGuard. Transaction context:
 
 {transaction_context}
 
-Call whichever available tools are worth checking (SIM swap and device
-swap are cheap and valuable for most non-trivial transactions; only call
-location if location_reference_available is true)."""
+Available tools (use these EXACT names, do not shorten or modify them):
+- check_sim_swap_tool
+- check_device_swap_tool
+- check_location_tool
 
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        tools=GROQ_INVESTIGATION_TOOLS_SCHEMA,
-        tool_choice="auto",
-    )
-    message = response.choices[0].message
-    tool_calls = message.tool_calls or []
+You have tools to gather network-based evidence. Call one or more tools,
+look at the result, and THEN decide whether you have enough evidence or
+need to check something else. Be thorough for large transactions or new
+beneficiaries; a small routine transaction may need less checking.
 
-    collected_signals = {}
-    for call in tool_calls:
-        name = call.function.name
-        try:
-            args = json.loads(call.function.arguments)
-        except Exception:
-            args = {}
-        if rejection_check_fn(name, transaction_context) is not None:
-            continue
-        fn = tool_map.get(name)
-        if fn is None:
-            continue
-        try:
-            result = fn(**args)
-        except Exception as exc:
-            result = {"degraded": True, "error": str(exc)}
-        collected_signals[name] = result
+Only request the location check if `location_reference_available` is true
+in the context above — it will be rejected otherwise. Never request a tool
+already successfully checked in this conversation.
+
+You gather EVIDENCE ONLY — you do not calculate risk scores or make the
+final decision. Once you have sufficient evidence, stop calling tools and
+simply confirm you're done."""
+
+    messages: list = [{"role": "user", "content": prompt}]
+    collected_signals: dict = {}
+
+    for _round in range(max_rounds):
+        response = _groq_chat_completion_with_retry(
+            client,
+            model=GROQ_MODEL,
+            messages=messages,
+            tools=GROQ_INVESTIGATION_TOOLS_SCHEMA,
+            tool_choice="auto",
+        )
+
+        message = response.choices[0].message
+        tool_calls = message.tool_calls or []
+
+        if not tool_calls:
+            break  # Groq decided it has sufficient evidence — real stopping condition
+
+        # Record the assistant's tool-call turn in proper OpenAI/Groq format
+        messages.append({
+            "role": "assistant",
+            "content": message.content or "",
+            "tool_calls": [
+                {
+                    "id": call.id,
+                    "type": "function",
+                    "function": {"name": call.function.name, "arguments": call.function.arguments},
+                }
+                for call in tool_calls
+            ],
+        })
+
+        for call in tool_calls:
+            name = call.function.name
+            try:
+                args = json.loads(call.function.arguments)
+            except Exception:
+                args = {}
+
+            if name in collected_signals:
+                tool_result = {"skipped": True, "reason": "already checked"}
+            else:
+                reason = rejection_check_fn(name, transaction_context)
+                if reason is not None:
+                    tool_result = {"skipped": True, "reason": reason}
+                else:
+                    fn = tool_map.get(name)
+                    if fn is None:
+                        tool_result = {"degraded": True, "error": f"unknown tool {name}"}
+                    else:
+                        try:
+                            tool_result = fn(**args)
+                        except Exception as exc:
+                            tool_result = {"degraded": True, "error": str(exc)}
+                        collected_signals[name] = tool_result
+
+            # Real "tool" role message with the matching tool_call_id — not
+            # a fake result stuffed into the prompt text.
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call.id,
+                "content": json.dumps(tool_result),
+            })
 
     return collected_signals
 
