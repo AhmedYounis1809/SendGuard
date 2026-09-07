@@ -19,7 +19,11 @@ const DEFAULT_FORM: AgentTransactionInput = {
   trusted_device_available: false,
 };
 
-export function VerificationView() {
+interface VerificationViewProps {
+  onBack?: () => void;
+}
+
+export function VerificationView({ onBack }: VerificationViewProps) {
   const { t } = useI18n();
 
   const [step, setStep] = useState<Step>("details");
@@ -57,9 +61,9 @@ export function VerificationView() {
         <div className="ra-topbar">
           <span className="ra-pill ra-pill--accent">
             <span className="ra-pill__dot" />
-            SendGuard Engine
+            {t("phoneStep.engineBadge")}
           </span>
-          <span className="ra-pill">Stage 2 · Execution</span>
+          <span className="ra-pill">{t("phoneStep.stage2ExecutionBadge")}</span>
           <button
             type="button"
             className="ra-btn ra-btn--ghost ra-btn--sm ra-topbar__action"
@@ -69,7 +73,7 @@ export function VerificationView() {
           </button>
         </div>
 
-        <VerificationConsole payload={confirmedPayload} />
+        <VerificationConsole payload={confirmedPayload} onBack={handleBack} />
       </div>
     );
   }
@@ -81,10 +85,19 @@ export function VerificationView() {
       <div className="ra-topbar">
         <span className="ra-pill ra-pill--accent">
           <span className="ra-pill__dot" />
-          SendGuard Engine
+          {t("phoneStep.engineBadge")}
         </span>
-        <span className="ra-pill">Signals: SIM Swap · Device Swap · Location</span>
-        <span className="ra-pill">Mode: Simulator Number</span>
+        <span className="ra-pill">{t("phoneStep.signalsBadge")}</span>
+        <span className="ra-pill">{t("phoneStep.modeBadge")}</span>
+        {onBack && (
+          <button
+            type="button"
+            className="ra-btn ra-btn--ghost ra-btn--sm ra-topbar__action"
+            onClick={onBack}
+          >
+            {t("phoneStep.backButton")}
+          </button>
+        )}
       </div>
 
       <div className="ra-card">
@@ -94,18 +107,15 @@ export function VerificationView() {
               <div>
                 <div className="ra-card__heading">
                   <h2>{t("phoneStep.title")}</h2>
-                  <span className="ra-stage">Stage 1</span>
+                  <span className="ra-stage">{t("common.stage1")}</span>
                 </div>
-                <p className="ra-card__desc">
-                  Configure the transaction and security context before
-                  running SendGuard verification.
-                </p>
+                <p className="ra-card__desc">{t("phoneStep.description")}</p>
               </div>
             </div>
 
             <div className="ra-section">
               <div className="ra-section__title">
-                Subscriber &amp; Transaction Attributes
+                {t("phoneStep.sectionAttributes")}
               </div>
 
               <div className="ra-fields">
@@ -116,17 +126,36 @@ export function VerificationView() {
                   >
                     {t("phoneStep.phoneLabel")} (MSISDN)
                   </label>
-                  <div className="ra-field__input-row">
+                  <div className="ra-field__input-row ra-field__input-row--disabled">
                     <input
                       id="phone-number-input"
                       className="ra-input"
                       type="tel"
                       dir="ltr"
                       value={form.phone_number}
-                      onChange={(event) =>
-                        updateField("phone_number", event.target.value)
-                      }
+                      disabled
+                      readOnly
                     />
+                    <span className="ra-field__lock" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                        <path d="M8 11V7.5a4 4 0 0 1 8 0V11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="ra-field__notice">
+                    <svg
+                      className="ra-field__notice-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M12 11v5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <circle cx="12" cy="8" r="1" fill="currentColor" />
+                    </svg>
+                    <span>{t("phoneStep.phoneHint")}</span>
                   </div>
                 </div>
 
@@ -135,7 +164,7 @@ export function VerificationView() {
                     className="ra-field__label"
                     htmlFor="amount-input"
                   >
-                    Transaction Amount
+                    {t("phoneStep.amountLabel")}
                   </label>
                   <div className="ra-field__input-row">
                     <input
@@ -156,7 +185,7 @@ export function VerificationView() {
                     className="ra-field__label"
                     htmlFor="currency-input"
                   >
-                    Currency
+                    {t("phoneStep.currencyLabel")}
                   </label>
                   <div className="ra-field__input-row">
                     <select
@@ -177,7 +206,7 @@ export function VerificationView() {
                     className="ra-field__label"
                     htmlFor="recent-transactions-input"
                   >
-                    Transactions in Last 10 Minutes
+                    {t("phoneStep.recentTxLabel")}
                   </label>
                   <div className="ra-field__input-row">
                     <input
@@ -194,7 +223,9 @@ export function VerificationView() {
                       }
                     />
                     <span className="ra-field__suffix">
-                      event{recentTxCount === 1 ? "" : "s"}
+                      {recentTxCount === 1
+                        ? t("verification.stats.event")
+                        : t("verification.stats.events")}
                     </span>
                   </div>
                 </div>
@@ -202,7 +233,7 @@ export function VerificationView() {
             </div>
 
             <div className="ra-section">
-              <div className="ra-section__title">Geographic Reference</div>
+              <div className="ra-section__title">{t("phoneStep.sectionGeo")}</div>
 
               <div className="ra-fields">
                 <div className="ra-field">
@@ -210,7 +241,7 @@ export function VerificationView() {
                     className="ra-field__label"
                     htmlFor="latitude-input"
                   >
-                    Usual Latitude
+                    {t("phoneStep.latitudeLabel")}
                   </label>
                   <div className="ra-field__input-row">
                     <input
@@ -226,7 +257,7 @@ export function VerificationView() {
                         )
                       }
                     />
-                    <span className="ra-field__suffix">deg N</span>
+                    <span className="ra-field__suffix">{t("phoneStep.degN")}</span>
                   </div>
                 </div>
 
@@ -235,7 +266,7 @@ export function VerificationView() {
                     className="ra-field__label"
                     htmlFor="longitude-input"
                   >
-                    Usual Longitude
+                    {t("phoneStep.longitudeLabel")}
                   </label>
                   <div className="ra-field__input-row">
                     <input
@@ -251,19 +282,19 @@ export function VerificationView() {
                         )
                       }
                     />
-                    <span className="ra-field__suffix">deg E</span>
+                    <span className="ra-field__suffix">{t("phoneStep.degE")}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="ra-section">
-              <div className="ra-section__title">Risk Signals</div>
+              <div className="ra-section__title">{t("phoneStep.sectionRisk")}</div>
 
               <div className="ra-fields">
                 <div className="ra-field">
                   <span className="ra-field__label">
-                    Location Reference Available
+                    {t("phoneStep.locationRefLabel")}
                   </span>
                   <div className="ra-toggle">
                     <button
@@ -277,7 +308,7 @@ export function VerificationView() {
                         updateField("location_reference_available", true)
                       }
                     >
-                      True
+                      {t("common.true")}
                     </button>
                     <button
                       type="button"
@@ -290,13 +321,13 @@ export function VerificationView() {
                         updateField("location_reference_available", false)
                       }
                     >
-                      False
+                      {t("common.false")}
                     </button>
                   </div>
                 </div>
 
                 <div className="ra-field">
-                  <span className="ra-field__label">New Beneficiary</span>
+                  <span className="ra-field__label">{t("phoneStep.newBeneficiaryLabel")}</span>
                   <div className="ra-toggle">
                     <button
                       type="button"
@@ -307,7 +338,7 @@ export function VerificationView() {
                       }`}
                       onClick={() => updateField("is_new_beneficiary", true)}
                     >
-                      True
+                      {t("common.true")}
                     </button>
                     <button
                       type="button"
@@ -318,13 +349,13 @@ export function VerificationView() {
                       }`}
                       onClick={() => updateField("is_new_beneficiary", false)}
                     >
-                      False
+                      {t("common.false")}
                     </button>
                   </div>
                 </div>
 
                 <div className="ra-field">
-                  <span className="ra-field__label">Trusted Device</span>
+                  <span className="ra-field__label">{t("phoneStep.trustedDeviceLabel")}</span>
                   <div className="ra-toggle">
                     <button
                       type="button"
@@ -337,7 +368,7 @@ export function VerificationView() {
                         updateField("trusted_device_available", true)
                       }
                     >
-                      True
+                      {t("common.true")}
                     </button>
                     <button
                       type="button"
@@ -350,7 +381,7 @@ export function VerificationView() {
                         updateField("trusted_device_available", false)
                       }
                     >
-                      False
+                      {t("common.false")}
                     </button>
                   </div>
                 </div>
@@ -359,22 +390,33 @@ export function VerificationView() {
 
             <div className="ra-footer">
               <span className="ra-footnote">
-                ✓ CAMARA OpenGateway handshake ready
+                ✓ {t("phoneStep.handshakeReady")}
               </span>
-              <button
-                type="button"
-                className="ra-btn"
-                onClick={handleNext}
-                disabled={form.phone_number.trim().length === 0}
-              >
-                {t("phoneStep.nextButton")}
-              </button>
+              <div className="ra-footer__actions">
+                {onBack && (
+                  <button
+                    type="button"
+                    className="ra-btn ra-btn--ghost"
+                    onClick={onBack}
+                  >
+                    {t("phoneStep.backButton")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="ra-btn"
+                  onClick={handleNext}
+                  disabled={form.phone_number.trim().length === 0}
+                >
+                  {t("phoneStep.nextButton")}
+                </button>
+              </div>
             </div>
           </div>
 
           <aside className="ra-panel">
             <div className="ra-panel__title">
-              <span>Payload Preview</span>
+              <span>{t("phoneStep.payloadPreviewTitle")}</span>
               <span className="ra-panel__target">
                 {form.phone_number || "—"}
               </span>
@@ -382,19 +424,22 @@ export function VerificationView() {
 
             <div className="ra-stat-grid">
               <div className="ra-stat">
-                <span className="ra-stat__label">Amount</span>
+                <span className="ra-stat__label">{t("verification.stats.amount")}</span>
                 <span className="ra-stat__value">
                   {form.amount.toLocaleString()} {form.currency}
                 </span>
               </div>
               <div className="ra-stat">
-                <span className="ra-stat__label">Velocity (10m)</span>
+                <span className="ra-stat__label">{t("verification.stats.velocity")}</span>
                 <span className="ra-stat__value">
-                  {recentTxCount} event{recentTxCount === 1 ? "" : "s"}
+                  {recentTxCount}{" "}
+                  {recentTxCount === 1
+                    ? t("verification.stats.event")
+                    : t("verification.stats.events")}
                 </span>
               </div>
               <div className="ra-stat">
-                <span className="ra-stat__label">Recipient</span>
+                <span className="ra-stat__label">{t("verification.stats.recipient")}</span>
                 <span
                   className={`ra-stat__value ${
                     form.is_new_beneficiary
@@ -403,12 +448,12 @@ export function VerificationView() {
                   }`}
                 >
                   {form.is_new_beneficiary
-                    ? "New Beneficiary"
-                    : "Known Beneficiary"}
+                    ? t("verification.stats.newBeneficiary")
+                    : t("verification.stats.knownBeneficiary")}
                 </span>
               </div>
               <div className="ra-stat">
-                <span className="ra-stat__label">Device</span>
+                <span className="ra-stat__label">{t("verification.stats.device")}</span>
                 <span
                   className={`ra-stat__value ${
                     form.trusted_device_available
@@ -417,8 +462,8 @@ export function VerificationView() {
                   }`}
                 >
                   {form.trusted_device_available
-                    ? "Trusted Device"
-                    : "Untrusted Device"}
+                    ? t("verification.stats.trustedDevice")
+                    : t("verification.stats.untrustedDevice")}
                 </span>
               </div>
             </div>
@@ -431,39 +476,41 @@ export function VerificationView() {
                   <span className="ra-terminal__dot ra-terminal__dot--green" />
                 </span>
                 <span className="ra-terminal__title">sendguard-agent</span>
-                <span className="ra-terminal__status">Idle</span>
+                <span className="ra-terminal__status">{t("phoneStep.terminalIdle")}</span>
               </div>
               <pre className="ra-terminal__body" dir="ltr">
                 <span className="ra-terminal__line--placeholder">
-                  $ waiting for execution trigger…
+                  {t("phoneStep.terminalWaiting")}
                 </span>
                 {"\n"}
                 <span className="ra-terminal__line--header">
                   {"-".repeat(38)}
                 </span>
                 {"\n"}
-                <span>&gt; Ready to check SIM Swap, Device Swap, Location</span>
+                <span>&gt; {t("phoneStep.terminalReadyChecks")}</span>
                 {"\n"}
-                <span>&gt; Trust decision via Gemini, Groq fallback chain</span>
+                <span>&gt; {t("phoneStep.terminalReadyDecision")}</span>
               </pre>
             </div>
 
             <div className="ra-checklist">
               <div className="ra-checklist__head">
-                <span>Pipeline Coverage</span>
-                <span className="ra-checklist__count">3 checks</span>
+                <span>{t("phoneStep.pipelineCoverageTitle")}</span>
+                <span className="ra-checklist__count">
+                  {t("phoneStep.checksCount", { count: 3 })}
+                </span>
               </div>
               <div className="ra-checklist__item">
-                <span>SIM Swap</span>
-                <span className="ra-checklist__status">Pending</span>
+                <span>{t("verification.signals.sim_swap")}</span>
+                <span className="ra-checklist__status">{t("phoneStep.pendingStatus")}</span>
               </div>
               <div className="ra-checklist__item">
-                <span>Device Swap</span>
-                <span className="ra-checklist__status">Pending</span>
+                <span>{t("verification.signals.device_swap")}</span>
+                <span className="ra-checklist__status">{t("phoneStep.pendingStatus")}</span>
               </div>
               <div className="ra-checklist__item">
-                <span>Location Verification</span>
-                <span className="ra-checklist__status">Pending</span>
+                <span>{t("verification.signals.location_verification")}</span>
+                <span className="ra-checklist__status">{t("phoneStep.pendingStatus")}</span>
               </div>
             </div>
           </aside>

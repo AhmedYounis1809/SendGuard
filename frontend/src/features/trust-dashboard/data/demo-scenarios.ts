@@ -10,17 +10,17 @@ import type { DemoScenario } from "../types/trust-dashboard.types";
 const CAIRO_LAT = 30.0444;
 const CAIRO_LNG = 31.2357;
 
+// Display strings (label, summary, risk label, location label, party names)
+// are not here — they live in the i18n dictionaries under
+// `dashboard.scenarios.<id>` so the dashboard localizes. This file only
+// holds the structural/numeric context each card runs against the agent.
 export const DEMO_SCENARIOS: DemoScenario[] = [
   {
     id: "everyday_transfer",
-    label: "Everyday Transfer",
-    summary: "Known recipient, normal spending pattern and recognized device.",
     category: "routine",
     riskTier: "low",
-    riskLabel: "Low Risk · Auto-Approve",
-    sender: { name: "Ahmed Mohamed", phone: "+20 10 1234 5678", account: "****1234" },
-    recipient: { name: "Mohamed Ali", phone: "+20 11 8765 4321", account: "****5678" },
-    locationLabel: "Cairo, Egypt",
+    sender: { phone: "+20 10 1234 5678", account: "****1234" },
+    recipient: { phone: "+20 11 8765 4321", account: "****5678" },
     payload: {
       amount: 500,
       currency: "EGP",
@@ -34,14 +34,10 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
   },
   {
     id: "family_support",
-    label: "Family Support",
-    summary: "Recurring transfer to a long-saved family member with a verified roaming profile.",
     category: "routine",
     riskTier: "low",
-    riskLabel: "Low Risk · Recurring",
-    sender: { name: "Sara Hassan", phone: "+20 12 2233 4455", account: "****2211" },
-    recipient: { name: "Hassan Ibrahim", phone: "+20 10 9988 7766", account: "****3344" },
-    locationLabel: "Cairo, Egypt",
+    sender: { phone: "+20 12 2233 4455", account: "****2211" },
+    recipient: { phone: "+20 10 9988 7766", account: "****3344" },
     payload: {
       amount: 1200,
       currency: "EGP",
@@ -55,14 +51,10 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
   },
   {
     id: "new_device",
-    label: "New Device, Known Recipient",
-    summary: "Recognized recipient, but the sender is on an unrecognized device.",
     category: "friction",
     riskTier: "medium",
-    riskLabel: "Medium Risk · Step-Up Auth",
-    sender: { name: "Omar Khaled", phone: "+20 15 5566 7788", account: "****7788" },
-    recipient: { name: "Khaled Mostafa", phone: "+20 11 3344 5566", account: "****9900" },
-    locationLabel: "Cairo, Egypt",
+    sender: { phone: "+20 15 5566 7788", account: "****7788" },
+    recipient: { phone: "+20 11 3344 5566", account: "****9900" },
     payload: {
       amount: 3000,
       currency: "EGP",
@@ -76,14 +68,10 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
   },
   {
     id: "new_beneficiary_large",
-    label: "New Beneficiary, Large Amount",
-    summary: "First-time recipient receiving an unusually large outbound transfer.",
     category: "friction",
     riskTier: "elevated",
-    riskLabel: "Elevated Risk · CAMARA Check",
-    sender: { name: "Mona Adel", phone: "+20 12 6677 8899", account: "****4455" },
-    recipient: { name: "Youssef Samir", phone: "+20 10 1122 3344", account: "****6677" },
-    locationLabel: "Cairo, Egypt",
+    sender: { phone: "+20 12 6677 8899", account: "****4455" },
+    recipient: { phone: "+20 10 1122 3344", account: "****6677" },
     payload: {
       amount: 25000,
       currency: "EGP",
@@ -97,14 +85,10 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
   },
   {
     id: "rapid_transfers",
-    label: "Rapid Back-to-Back Transfers",
-    summary: "Multiple rapid transfers to an unfamiliar account within minutes.",
     category: "suspicious",
     riskTier: "high",
-    riskLabel: "High Risk · Velocity Spike",
-    sender: { name: "Laila Nabil", phone: "+20 11 9900 1122", account: "****8899" },
-    recipient: { name: "Tarek Fathy", phone: "+20 12 4455 6677", account: "****1122" },
-    locationLabel: "No reference on file",
+    sender: { phone: "+20 11 9900 1122", account: "****8899" },
+    recipient: { phone: "+20 12 4455 6677", account: "****1122" },
     payload: {
       amount: 8000,
       currency: "EGP",
@@ -118,14 +102,10 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
   },
   {
     id: "high_value_no_reference",
-    label: "High-Value, No Reference",
-    summary: "Large payout with no location history and an unrecognized device.",
     category: "suspicious",
     riskTier: "critical",
-    riskLabel: "Critical · Intercept",
-    sender: { name: "Karim Adel", phone: "+20 10 3322 1100", account: "****5566" },
-    recipient: { name: "Nour ElDin", phone: "+20 15 7788 9900", account: "****2233" },
-    locationLabel: "No reference on file",
+    sender: { phone: "+20 10 3322 1100", account: "****5566" },
+    recipient: { phone: "+20 15 7788 9900", account: "****2233" },
     payload: {
       amount: 50000,
       currency: "EGP",

@@ -85,6 +85,7 @@
 .ra-stage {
   font-family: var(--font-mono);
   font-size: 0.65rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-primary);
@@ -137,7 +138,8 @@
   align-items: center;
   gap: 0.5rem;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-primary);
@@ -171,7 +173,8 @@
 
 .ra-field__label {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.85rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #6ea8c4;
@@ -189,6 +192,55 @@
 
 .ra-field__input-row:focus-within {
   border-color: var(--color-primary);
+}
+
+.ra-field__input-row--disabled {
+  background: #050e17;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ra-field__input-row--disabled:focus-within {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.ra-field__input-row--disabled .ra-input:disabled {
+  color: #8098a8;
+  cursor: not-allowed;
+}
+
+.ra-field__lock {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: #6ea8c4;
+  padding-inline-start: 0.4rem;
+}
+
+.ra-field__lock svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ra-field__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(var(--color-primary-rgb), 0.08);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.25);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #9fb3c2;
+}
+
+.ra-field__notice-icon {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-top: 0.1rem;
+  color: var(--color-primary);
 }
 
 .ra-field__suffix {
@@ -266,6 +318,12 @@
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--color-tertiary);
+}
+
+.ra-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 /* Buttons */
@@ -607,6 +665,18 @@
 
 .ra-line--error .ra-line__marker::before {
   content: "✕";
+}
+
+/* Graceful degradation — an engine tier fell back or a signal came back
+   incomplete, but the run still produced a valid decision. Colored amber
+   (not red) so it doesn't read as a broken app. */
+.ra-line--warn {
+  color: var(--color-warning);
+  padding-inline-start: 1.5ch;
+}
+
+.ra-line--warn .ra-line__marker::before {
+  content: "↻";
 }
 
 /* Leader-dot metric rows: label ....... value */

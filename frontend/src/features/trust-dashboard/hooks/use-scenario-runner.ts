@@ -9,7 +9,7 @@ import type { DemoScenario } from "../types/trust-dashboard.types";
 import { modeLabel, type AgentMode } from "../../camara-verification/lib/agent-modes";
 import { attributeFallbackReason, type ServiceFailure } from "../../camara-verification/lib/fallback-reason";
 
-export type ConsoleLineTone = "default" | "success" | "error" | "header" | "step" | "muted" | "metric" | "rule";
+export type ConsoleLineTone = "default" | "success" | "error" | "warn" | "header" | "step" | "muted" | "metric" | "rule";
 export type MetricValueTone = "warn" | "danger";
 
 export interface ConsoleLine {
@@ -30,7 +30,7 @@ const SIGNAL_STEPS: { tool: string; label: string }[] = [
 
 function describeSignal(tool: string, data: Record<string, unknown> | undefined): string {
   if (!data) return "no data";
-  if (data.degraded) return `error: ${data.error ?? "unknown"}`;
+  if (data.degraded) return `temporarily unavailable — ${data.error ?? "unknown reason"}, agent continued without it`;
   if (tool === "check_location_tool") return `verificationResult=${data.verification_result}`;
   return `hours_since_swap=${data.hours_since_swap}`;
 }
@@ -47,7 +47,7 @@ function pushServiceFailures(
   failures: ServiceFailure[],
 ) {
   for (const failure of failures) {
-    push(t(`fallbackChain.reason.causes.${failure.cause}`, { service: failure.service }), "error");
+    push(t(`fallbackChain.reason.causes.${failure.cause}`, { service: failure.service }), "warn");
   }
 }
 
@@ -105,7 +105,7 @@ export function useScenarioRunner() {
         pushLine(`[${stepNum}/${totalChecked}] ${label}`, "step");
         const data = agentResult.raw_signals[tool];
         const degraded = Boolean(data?.degraded);
-        pushLine(describeSignal(tool, data), degraded ? "error" : "success");
+        pushLine(describeSignal(tool, data), degraded ? "warn" : "success");
       } else if (wasSkipped) {
         pushLine(`${label} — skipped (not needed for this transaction)`, "muted");
       }
