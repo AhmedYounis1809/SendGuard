@@ -291,9 +291,27 @@
 }
 
 .dash-pill--allow {
-  color: var(--color-tertiary);
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #6ffcbf;
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.75);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+}
+
+.dash-pill__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--color-tertiary);
+  color: #06281d;
+  font-size: 0.65rem;
+  font-weight: 900;
+  animation: check-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .dash-pill--adaptive {
@@ -368,4 +386,165 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #6ea8c4;
+}
+
+/* Snackbar — nudges the user back to the live-decision panel while a
+   scenario is still simulating, and reports the outcome once it lands. */
+
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: 1.75rem;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  max-width: min(90vw, 420px);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #0f1f2b;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-neutral);
+  /* Every snackbar — info included — shares one entrance animation, so the
+     toast feels like one consistent system rather than two different ones. */
+  animation: decision-ready-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.snackbar span:first-child {
+  flex: 1;
+}
+
+/* Tone tints are layered over the solid base color at low opacity, rather
+   than replacing it, so the card content behind the toast never bleeds
+   through and the message stays easy to read. */
+
+.snackbar--info {
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  background: linear-gradient(rgba(var(--color-primary-rgb), 0.08), rgba(var(--color-primary-rgb), 0.08)), #0f1f2b;
+}
+
+.snackbar--allow {
+  border-color: rgba(16, 185, 129, 0.75);
+  background: linear-gradient(rgba(16, 185, 129, 0.14), rgba(16, 185, 129, 0.14)), #0f1f2b;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 32px rgba(16, 185, 129, 0.45);
+}
+
+.snackbar--adaptive {
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  background: linear-gradient(rgba(var(--color-primary-rgb), 0.08), rgba(var(--color-primary-rgb), 0.08)), #0f1f2b;
+}
+
+.snackbar--hold {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: linear-gradient(rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.08)), #0f1f2b;
+}
+
+.snackbar--freeze,
+.snackbar--error {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: linear-gradient(rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.08)), #0f1f2b;
+}
+
+@keyframes decision-ready-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 18px) scale(0.9);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(-50%, -4px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Exploding check — a checkmark that pops in while two rings burst
+   outward and fade, used to make an ALLOW decision unmistakable. */
+
+.snackbar__check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--color-tertiary);
+  color: #06281d;
+  font-size: 0.9rem;
+  font-weight: 900;
+  animation: check-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.snackbar__check-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-tertiary);
+  animation: check-burst 0.7s ease-out both;
+}
+
+.snackbar__check-ring:last-child {
+  animation-delay: 0.1s;
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes check-burst {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.snackbar__action,
+.snackbar__close {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.snackbar__action {
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.snackbar__close {
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.snackbar__close:hover {
+  opacity: 1;
 }

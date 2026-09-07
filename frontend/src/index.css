@@ -40,12 +40,44 @@ html[data-theme="charcoal-gold"] {
   --color-neutral: #f5f5f5;
 }
 
-html[data-theme="amber-navy"] {
-  --color-primary: #fca311;
-  --color-primary-rgb: 252, 163, 17;
-  --color-secondary: #000000;
-  --color-secondary-light: #14213d;
-  --color-neutral: #ffffff;
+html[data-theme="violet-nightfall"] {
+  --color-primary: #a855f7;
+  --color-primary-rgb: 168, 85, 247;
+  --color-secondary: #1e1b4b;
+  --color-secondary-light: #2e2a5e;
+  --color-neutral: #f5f3ff;
+}
+
+html[data-theme="cyan-ember"] {
+  --color-primary: #22d3ee;
+  --color-primary-rgb: 34, 211, 238;
+  --color-secondary: #0f172a;
+  --color-secondary-light: #1e293b;
+  --color-neutral: #ecfeff;
+}
+
+html[data-theme="hanken-teal"] {
+  --color-primary: #5eead4;
+  --color-primary-rgb: 94, 234, 212;
+  --color-secondary: #0f172a;
+  --color-secondary-light: #1e293b;
+  --color-neutral: #f0fdfa;
+}
+
+html[data-theme="emerald-matrix"] {
+  --color-primary: #10b981;
+  --color-primary-rgb: 16, 185, 129;
+  --color-secondary: #022c22;
+  --color-secondary-light: #064e3b;
+  --color-neutral: #ecfdf5;
+}
+
+html[data-theme="solar-flare"] {
+  --color-primary: #f59e0b;
+  --color-primary-rgb: 245, 158, 11;
+  --color-secondary: #451a03;
+  --color-secondary-light: #78350f;
+  --color-neutral: #fffbeb;
 }
 
 /* Arabic has no Latin-style display face here — Cairo covers both headings

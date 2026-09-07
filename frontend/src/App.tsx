@@ -66,7 +66,9 @@ function App() {
           </section>
         )}
         {view === "dashboard" && <DashboardView />}
-        {view === "verification" && <VerificationView />}
+        {view === "verification" && (
+          <VerificationView onBack={() => setView("landing")} />
+        )}
         {view === "settings" && <SettingsPage />}
       </main>
 
