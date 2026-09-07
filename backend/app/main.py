@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from typing import Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -12,6 +12,8 @@ from app.camara.sim_swap import get_sim_swap_score
 from app.camara.device_swap import get_device_swap_score
 from app.camara.location_verification import verify_location
 from app.agent.agent import run_agent
+from app.agent.demo_mode import set_demo_signals
+from app.agent.demo_scenarios import DEMO_SCENARIO_SIGNALS
 
 SIMULATOR_NUMBER = "+99999991000"
 CAIRO_LAT, CAIRO_LNG = 30.0444, 31.2357
@@ -63,3 +65,25 @@ def run_agent_test(request: AgentTestRequest = AgentTestRequest()):
     investigation, real CAMARA APIs, deterministic Trust Engine,
     Gemini/Groq/Deterministic recommendation, executed action)."""
     return run_agent(request.dict())
+
+
+@app.post("/api/scenarios/{scenario_id}/run")
+def run_demo_scenario(scenario_id: str, request: AgentTestRequest):
+    """
+    Runs a predefined demo scenario through the REAL agent pipeline — the
+    only difference from /api/agent/run is that the 3 CAMARA tools return
+    pre-set mock evidence for this scenario instead of calling real Nokia
+    APIs (guaranteed zero real network calls, 100% reproducible). The
+    Agent still genuinely decides which signals to check; the Trust Engine
+    and Recommendation logic are completely unchanged and real.
+    """
+    if scenario_id not in DEMO_SCENARIO_SIGNALS:
+        raise HTTPException(status_code=404, detail=f"Unknown scenario_id: {scenario_id}")
+
+    set_demo_signals(DEMO_SCENARIO_SIGNALS[scenario_id])
+    try:
+        result = run_agent(request.dict())
+    finally:
+        set_demo_signals(None)  # always reset, so it never leaks into a later /api/agent/run call
+
+    return result

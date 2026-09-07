@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useI18n } from "../../../core/i18n";
-import { env } from "../../../core/config/env";
-import { useCamaraVerification } from "../../camara-verification/hooks/use-camara-verification";
+import { useScenarioRunner } from "../hooks/use-scenario-runner";
+import { SIMULATOR_PHONE_NUMBER } from "../api/scenario.api";
 import { AgentConsole } from "../../camara-verification/components/agent-console";
 import { FallbackChain } from "../../camara-verification/components/fallback-chain";
 import { DEMO_SCENARIOS } from "../data/demo-scenarios";
@@ -34,7 +34,7 @@ export function DashboardView() {
   const { t } = useI18n();
   const [filter, setFilter] = useState<FilterId>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
-  const { lines, status, result, run } = useCamaraVerification();
+  const { lines, status, result, run } = useScenarioRunner();
 
   const isRunning = status === "running";
 
@@ -48,13 +48,7 @@ export function DashboardView() {
 
   const handleRun = (scenario: DemoScenario) => {
     setActiveId(scenario.id);
-    // The card displays the demo sender/recipient phone numbers for the
-    // story, but the agent is always called with the real CAMARA
-    // simulator number — that's the only number with live signal data.
-    run({
-      ...scenario.payload,
-      phone_number: env.defaultPhoneNumber,
-    });
+    run(scenario);
   };
 
   const activeScenario = DEMO_SCENARIOS.find((s) => s.id === activeId) ?? null;
@@ -203,7 +197,7 @@ export function DashboardView() {
                   </div>
                   <p className="ra-card__desc">{activeScenario.summary}</p>
                   <p className="ra-card__note">
-                    Verifying number: {env.defaultPhoneNumber}
+                    Verifying number: {SIMULATOR_PHONE_NUMBER}
                   </p>
                 </div>
               </div>
