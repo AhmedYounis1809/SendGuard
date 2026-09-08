@@ -1,18 +1,23 @@
 """
-SendGuard — LLM Client with 3-tier reliability fallback.
+SendGuard — LLM Client with resilient investigation fallback.
 
-INVESTIGATION layer: Pydantic AI Agent (approved agent framework) running
-Gemini as primary model with Groq as an automatic fallback model via
-Pydantic AI's built-in FallbackModel — falling further back to a
-deterministic (no-LLM) investigation if both providers fail.
+INVESTIGATION layer: Pydantic AI Agent using:
+    Gemini attempt #1
+        -> Gemini retry
+        -> Groq fallback
+        -> Groq retry
+        -> deterministic fallback
 
 RECOMMENDATION layer: UNCHANGED from before (raw google-genai / groq SDK
-calls) — this file's recommendation section was not part of the migration
-scope and is preserved verbatim.
+calls) — this section is intentionally preserved.
 """
 
 import os
 import json
+import contextvars
+import queue
+import threading
+import time
 from typing import Callable, Optional
 
 from google import genai
@@ -27,14 +32,6 @@ except ImportError:
 from pydantic_ai import Agent
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.groq import GroqModel
-from pydantic_ai.models.fallback import FallbackModel
-try:
-    from pydantic_ai.exceptions import FallbackExceptionGroup
-except ImportError:
-    # Fallback import path in case the exception lives elsewhere in the
-    # installed pydantic-ai version — report the exact ImportError if this
-    # also fails, so the import path can be corrected quickly.
-    from pydantic_ai.models.fallback import FallbackExceptionGroup
 
 from app.agent.investigation_state import (
     transaction_context_var,
@@ -46,13 +43,40 @@ from app.agent.investigation_state import (
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
+# Investigation timeout/retry settings.
+#
+# Maximum LLM waiting time:
+#   Gemini #1 = 12s
+#   Gemini #2 = 12s
+#   Groq   #1 = 10s
+#   Groq   #2 = 10s
+#   Total   = 44s + tiny retry delays
+#
+# These can be overridden from .env if needed.
+GEMINI_ATTEMPT_TIMEOUT = float(
+    os.getenv("SENDGUARD_GEMINI_ATTEMPT_TIMEOUT", "12")
+)
+GROQ_ATTEMPT_TIMEOUT = float(
+    os.getenv("SENDGUARD_GROQ_ATTEMPT_TIMEOUT", "10")
+)
+
+GEMINI_MAX_ATTEMPTS = int(
+    os.getenv("SENDGUARD_GEMINI_ATTEMPTS", "2")
+)
+GROQ_MAX_ATTEMPTS = int(
+    os.getenv("SENDGUARD_GROQ_ATTEMPTS", "2")
+)
+
+RETRY_DELAY = float(
+    os.getenv("SENDGUARD_LLM_RETRY_DELAY", "0.25")
+)
+
 _gemini_client = None
 _groq_client = None
 
 
 def _get_gemini_client() -> genai.Client:
-    """Used by the RECOMMENDATION layer only (unchanged) — the investigation
-    layer now goes through Pydantic AI instead."""
+    """Used by the RECOMMENDATION layer only (unchanged)."""
     global _gemini_client
     if _gemini_client is None:
         if not os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
@@ -75,91 +99,341 @@ def _get_groq_client():
 
 
 # ===========================================================================
-# INVESTIGATION — Pydantic AI Agent (Gemini primary, Groq fallback via
-# FallbackModel), deterministic investigation as the final safety net.
+# INVESTIGATION — Pydantic AI Agent
 # ===========================================================================
 
-_investigation_agent: Optional[Agent] = None
+# We intentionally keep Gemini and Groq as separate Agents instead of using
+# one Pydantic AI FallbackModel.
+#
+# This gives us explicit control over:
+#
+#   Gemini #1 -> Gemini #2 -> Groq #1 -> Groq #2 -> deterministic
+#
+# and allows us to protect each provider attempt with its own wall-clock
+# timeout.
+_investigation_agents: dict[str, Agent] = {}
 
 
-def _get_investigation_agent(available_tools: list) -> Agent:
+def _get_investigation_agent(
+    provider: str,
+    available_tools: list,
+) -> Agent:
     """
-    Builds the Pydantic AI investigation Agent once and caches it.
+    Builds/caches one Pydantic AI investigation Agent per provider.
 
-    FallbackModel tries `gemini_model` first; on a ModelAPIError (rate
-    limits, 5xx, timeouts — the default `fallback_on` behavior) it
-    automatically retries the same request against `groq_model`. If BOTH
-    fail, Pydantic AI raises a FallbackExceptionGroup, which we catch in
-    investigate_transaction() to drop to the deterministic path.
-
-    Tools are registered via `tool_plain` (not `tool`) specifically because
-    the existing tool functions must keep their exact original signatures
-    (no RunContext parameter) — see orchestrator.py's docstring.
+    tool_plain() is intentionally used because the existing CAMARA tool
+    functions must keep their exact signatures without RunContext.
     """
-    global _investigation_agent
-    if _investigation_agent is None:
-        gemini_model = GoogleModel(GEMINI_MODEL)
-        groq_model = GroqModel(GROQ_MODEL)
-        fallback_model = FallbackModel(gemini_model, groq_model)
+    tool_key = ",".join(
+        sorted(
+            getattr(tool_fn, "__name__", repr(tool_fn))
+            for tool_fn in available_tools
+        )
+    )
+    cache_key = f"{provider}:{tool_key}"
 
-        agent = Agent(fallback_model)
-        for tool_fn in available_tools:
-            agent.tool_plain(tool_fn)
+    if cache_key in _investigation_agents:
+        return _investigation_agents[cache_key]
 
-        _investigation_agent = agent
-    return _investigation_agent
+    if provider == "gemini":
+        model = GoogleModel(GEMINI_MODEL)
+    elif provider == "groq":
+        model = GroqModel(GROQ_MODEL)
+    else:
+        raise ValueError(f"Unsupported investigation provider: {provider}")
+
+    agent = Agent(model)
+
+    for tool_fn in available_tools:
+        agent.tool_plain(tool_fn)
+
+    _investigation_agents[cache_key] = agent
+    return agent
 
 
-def _infer_investigation_mode(result) -> str:
+def _infer_investigation_mode(result, provider: str) -> str:
     """
-    Best-effort introspection of which model in the FallbackModel chain
-    actually produced the final response, purely for transparency in the
-    demo UI (does not affect correctness of the investigation itself,
-    which already succeeded either way by the time this runs).
+    Best-effort introspection of which provider produced the result.
     """
     try:
         for message in reversed(result.all_messages()):
             model_name = getattr(message, "model_name", None)
             if not model_name:
                 continue
-            if GEMINI_MODEL in model_name or "gemini" in model_name.lower():
+
+            model_name = str(model_name)
+
+            if "gemini" in model_name.lower():
                 return "AI_GEMINI"
-            if GROQ_MODEL in model_name or "groq" in model_name.lower():
+
+            if "groq" in model_name.lower():
                 return "AI_GROQ_FALLBACK"
-            return f"AI_PYDANTIC:{model_name}"
+
     except Exception as exc:
-        print(f"[SendGuard][LLM] Could not introspect which model handled the request: {exc}")
-    return "AI_PYDANTIC"
+        print(
+            "[SendGuard][LLM] Could not introspect which model "
+            f"handled the request: {exc}"
+        )
+
+    return "AI_GEMINI" if provider == "gemini" else "AI_GROQ_FALLBACK"
 
 
-def _deterministic_investigate(transaction_context, tool_map, rejection_check_fn) -> dict:
-    """UNCHANGED — the existing deterministic investigation fallback, calling
-    the exact same tool functions directly."""
+def _run_with_timeout(
+    fn: Callable[[], object],
+    timeout_seconds: float,
+):
+    """
+    Run a synchronous provider call with a wall-clock timeout.
+
+    Returns:
+        (True, result, None)  on success
+        (False, None, error)  on failure/timeout
+
+    Python cannot safely kill an arbitrary running thread, so a timed-out
+    provider call may continue in the background. The SendGuard request does
+    not wait for it anymore, and each attempt uses its own ContextVar context.
+    """
+    result_queue = queue.Queue(maxsize=1)
+
+    # Copy the caller's context BEFORE creating the worker so request-local
+    # demo state and other ContextVars are available inside the worker.
+    caller_context = contextvars.copy_context()
+
+    def worker():
+        try:
+            result = caller_context.run(fn)
+            result_queue.put(("ok", result))
+        except BaseException as exc:
+            try:
+                result_queue.put(("error", exc))
+            except queue.Full:
+                pass
+
+    thread = threading.Thread(
+        target=worker,
+        name="sendguard-llm-attempt",
+        daemon=True,
+    )
+    thread.start()
+
+    try:
+        status, value = result_queue.get(
+            timeout=max(0.1, timeout_seconds)
+        )
+    except queue.Empty:
+        return (
+            False,
+            None,
+            TimeoutError(
+                f"provider timed out after {timeout_seconds:.1f}s"
+            ),
+        )
+
+    if status == "ok":
+        return True, value, None
+
+    return False, None, value
+
+
+def _run_provider_attempt(
+    provider: str,
+    attempt: int,
+    transaction_context,
+    prompt: str,
+    available_tools: list,
+    timeout_seconds: float,
+):
+    """
+    Runs exactly one bounded Pydantic AI provider attempt.
+    """
+    print(
+        f"[SendGuard][LLM] Investigation: "
+        f"{provider.upper()} attempt {attempt} "
+        f"(timeout={timeout_seconds:.1f}s)..."
+    )
+
+    agent = _get_investigation_agent(
+        provider,
+        available_tools,
+    )
+
+    def run_agent():
+        # Every attempt starts from clean investigation state.
+        reset_investigation_state(transaction_context)
+
+        result = agent.run_sync(prompt)
+
+        signals = collected_signals_var.get() or {}
+
+        return result, dict(signals)
+
+    started = time.monotonic()
+
+    success, payload, error = _run_with_timeout(
+        run_agent,
+        timeout_seconds,
+    )
+
+    elapsed = time.monotonic() - started
+
+    if not success:
+        print(
+            f"[SendGuard][LLM] Investigation: "
+            f"{provider.upper()} attempt {attempt} FAILED "
+            f"after {elapsed:.2f}s: {error}"
+        )
+        return False, None, error
+
+    result, signals = payload
+
+    mode = _infer_investigation_mode(
+        result,
+        provider,
+    )
+
+    print(
+        f"[SendGuard][LLM] Investigation: "
+        f"{provider.upper()} attempt {attempt} succeeded "
+        f"in {elapsed:.2f}s"
+    )
+    print(
+        f"[SendGuard][LLM] Investigation SOURCE = {mode}"
+    )
+
+    return True, {
+        "signals": signals,
+        "mode": mode,
+        "result": result,
+    }, None
+
+
+def _run_provider(
+    provider: str,
+    attempts: int,
+    timeout_seconds: float,
+    transaction_context,
+    prompt: str,
+    available_tools: list,
+):
+    """
+    Runs one provider with retries.
+
+    Example:
+
+        Gemini #1 -> Gemini #2
+    """
+    failures = []
+
+    for attempt in range(1, attempts + 1):
+        try:
+            success, payload, error = _run_provider_attempt(
+                provider=provider,
+                attempt=attempt,
+                transaction_context=transaction_context,
+                prompt=prompt,
+                available_tools=available_tools,
+                timeout_seconds=timeout_seconds,
+            )
+        except Exception as exc:
+            success = False
+            payload = None
+            error = exc
+
+            print(
+                f"[SendGuard][LLM] Investigation: "
+                f"{provider.upper()} attempt {attempt} raised: {exc}"
+            )
+
+        if success:
+            return True, payload, failures
+
+        failures.append(
+            f"{provider.upper()} attempt {attempt}: {error}"
+        )
+
+        if attempt < attempts:
+            print(
+                f"[SendGuard][LLM] Investigation: "
+                f"{provider.upper()} retrying..."
+            )
+
+            if RETRY_DELAY > 0:
+                time.sleep(RETRY_DELAY)
+
+    return False, None, failures
+
+
+def _deterministic_investigate(
+    transaction_context,
+    tool_map,
+    rejection_check_fn,
+) -> dict:
+    """UNCHANGED — existing deterministic investigation fallback."""
+    reset_investigation_state(transaction_context)
+
     phone_number = transaction_context.get("phone_number")
     collected_signals = {}
-    for name in ["check_sim_swap_tool", "check_device_swap_tool", "check_location_tool"]:
+
+    for name in [
+        "check_sim_swap_tool",
+        "check_device_swap_tool",
+        "check_location_tool",
+    ]:
         if rejection_check_fn(name, transaction_context) is not None:
             continue
+
         fn = tool_map.get(name)
         if fn is None:
             continue
+
         try:
             if name == "check_location_tool":
                 result = fn(
                     phone_number=phone_number,
-                    expected_latitude=transaction_context.get("usual_latitude"),
-                    expected_longitude=transaction_context.get("usual_longitude"),
+                    expected_latitude=transaction_context.get(
+                        "usual_latitude"
+                    ),
+                    expected_longitude=transaction_context.get(
+                        "usual_longitude"
+                    ),
                 )
             else:
-                result = fn(phone_number=phone_number)
+                result = fn(
+                    phone_number=phone_number
+                )
         except Exception as exc:
-            result = {"degraded": True, "error": str(exc)}
+            result = {
+                "degraded": True,
+                "error": str(exc),
+            }
+
         collected_signals[name] = result
+
     return collected_signals
 
 
-def investigate_transaction(transaction_context, available_tools, tool_map, rejection_check_fn) -> tuple[dict, str, Optional[str]]:
-    """Returns (collected_signals, mode, fallback_reason)."""
+def investigate_transaction(
+    transaction_context,
+    available_tools,
+    tool_map,
+    rejection_check_fn,
+) -> tuple[dict, str, Optional[str]]:
+    """
+    Returns:
+        (collected_signals, mode, fallback_reason)
+
+    Investigation order:
+
+        Gemini #1
+            ↓
+        Gemini #2
+            ↓
+        Groq #1
+            ↓
+        Groq #2
+            ↓
+        deterministic fallback
+    """
     reset_investigation_state(transaction_context)
 
     prompt = f"""You are a fraud-risk INVESTIGATION agent for a financial
@@ -180,30 +454,90 @@ You gather EVIDENCE ONLY — you do not calculate risk scores or make the
 final decision. Once you have sufficient evidence, stop calling tools and
 simply confirm you're done."""
 
-    try:
-        print("[SendGuard][LLM] Investigation: running Pydantic AI agent (Gemini primary, Groq fallback)...")
-        agent = _get_investigation_agent(available_tools)
-        result = agent.run_sync(prompt)
-        signals = collected_signals_var.get() or {}
-        mode = _infer_investigation_mode(result)
-        reason = None if mode == "AI_GEMINI" else "Gemini unavailable — Pydantic AI's FallbackModel used Groq"
-        print(f"[SendGuard][LLM] Investigation SOURCE = {mode}")
-        return signals, mode, reason
-    except FallbackExceptionGroup as exc:
-        print(f"[SendGuard][LLM] Investigation: both Gemini and Groq failed via Pydantic AI ({exc}). Using deterministic fallback...")
-    except Exception as exc:
-        # Any other unexpected error (e.g. a Pydantic AI/library issue) —
-        # do not let the whole request crash, drop to deterministic instead.
-        print(f"[SendGuard][LLM] Investigation: Pydantic AI agent raised an unexpected error ({exc}). Using deterministic fallback...")
+    all_failures = []
 
-    reset_investigation_state(transaction_context)  # clean slate before the deterministic pass
-    signals = _deterministic_investigate(transaction_context, tool_map, rejection_check_fn)
-    print("[SendGuard][LLM] Investigation SOURCE = DETERMINISTIC (no LLM available)")
-    return signals, "DETERMINISTIC_FALLBACK", "Both Gemini and Groq were unavailable"
+    print(
+        "[SendGuard][LLM] Investigation: "
+        "running Pydantic AI agent..."
+    )
+
+    # -----------------------------------------------------------------------
+    # Gemini primary + retry
+    # -----------------------------------------------------------------------
+    gemini_ok, gemini_payload, gemini_failures = _run_provider(
+        provider="gemini",
+        attempts=GEMINI_MAX_ATTEMPTS,
+        timeout_seconds=GEMINI_ATTEMPT_TIMEOUT,
+        transaction_context=transaction_context,
+        prompt=prompt,
+        available_tools=available_tools,
+    )
+
+    all_failures.extend(gemini_failures)
+
+    if gemini_ok and gemini_payload:
+        return (
+            gemini_payload["signals"],
+            "AI_GEMINI",
+            None,
+        )
+
+    print(
+        "[SendGuard][LLM] Investigation: "
+        "Gemini unavailable after retries. Trying Groq..."
+    )
+
+    # -----------------------------------------------------------------------
+    # Groq fallback + retry
+    # -----------------------------------------------------------------------
+    groq_ok, groq_payload, groq_failures = _run_provider(
+        provider="groq",
+        attempts=GROQ_MAX_ATTEMPTS,
+        timeout_seconds=GROQ_ATTEMPT_TIMEOUT,
+        transaction_context=transaction_context,
+        prompt=prompt,
+        available_tools=available_tools,
+    )
+
+    all_failures.extend(groq_failures)
+
+    if groq_ok and groq_payload:
+        return (
+            groq_payload["signals"],
+            "AI_GROQ_FALLBACK",
+            None,
+        )
+
+    # -----------------------------------------------------------------------
+    # Deterministic final fallback
+    # -----------------------------------------------------------------------
+    print(
+        "[SendGuard][LLM] Investigation: "
+        "Gemini and Groq failed. Using deterministic fallback..."
+    )
+
+    signals = _deterministic_investigate(
+        transaction_context,
+        tool_map,
+        rejection_check_fn,
+    )
+
+    print(
+        "[SendGuard][LLM] Investigation SOURCE = "
+        "DETERMINISTIC_FALLBACK"
+    )
+
+    fallback_reason = " | ".join(all_failures)
+
+    return (
+        signals,
+        "DETERMINISTIC_FALLBACK",
+        fallback_reason or "Both Gemini and Groq were unavailable",
+    )
 
 
 # ===========================================================================
-# RECOMMENDATION — UNCHANGED (not part of the Pydantic AI migration scope)
+# RECOMMENDATION — UNCHANGED
 # ===========================================================================
 
 def _build_action_prompt(tier, transaction_context, degraded_signals, reasons, allowed) -> str:
