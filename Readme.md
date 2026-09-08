@@ -295,24 +295,34 @@ Scenario 3 in the demo demonstrates this principle directly: a known beneficiary
 
 ---
 
-# 3. AI-Powered Evidence Orchestration
+## 3. AI-Powered Evidence Orchestration
 
 The AI Agent is not a chatbot sitting on top of the system.
 
-It actively orchestrates the investigation.
+SendGuard uses **Pydantic AI** as the Agent runtime for investigation and evidence orchestration.
+
+The Agent receives the financial transaction context and decides which telecom evidence should be collected through the available CAMARA tools.
 
 For example:
 
 ```text
 50,000 EGP
+
 +
+
 New beneficiary
+
 +
+
 Untrusted device
 
         ↓
 
-Agent analyzes context
+Pydantic AI Agent analyzes context
+
+        ↓
+
+Decide which evidence is relevant
 
         ↓
 
@@ -322,14 +332,55 @@ Check Location if a valid reference exists
 
         ↓
 
-Evaluate collected evidence
+Collect network evidence
 ```
 
-The Agent decides **which evidence to request**.
+The investigation Agent can perform **multi-step tool orchestration**:
 
-The Trust Engine decides **how that evidence affects the Trust Index**.
+```text
+Transaction Context
+        ↓
+Pydantic AI Agent
+        ↓
+Tool Call
+        ↓
+Python Tool Wrapper
+        ↓
+CAMARA / Demo Signal
+        ↓
+Tool Result
+        ↓
+Pydantic AI Agent
+        ↓
+More evidence if needed
+        ↓
+Stop investigation
+```
 
-This keeps reasoning and financial risk arithmetic separate.
+The Agent is therefore responsible for:
+
+* deciding which network evidence to request
+* orchestrating multiple CAMARA tools
+* continuing the investigation when additional evidence is needed
+* returning collected evidence to the SendGuard pipeline
+
+The Agent does **not** calculate the final Trust Index.
+
+The Trust Engine remains deterministic.
+
+This creates a deliberate separation:
+
+```text
+Pydantic AI Agent
+        =
+Evidence orchestration
+
+Trust Engine
+        =
+Financial risk calculation
+```
+
+This design allows SendGuard to satisfy the hackathon's agentic-AI requirement without allowing the LLM to directly control financial-risk arithmetic.
 
 ---
 
@@ -643,6 +694,46 @@ It is because **multiple independent financial and network signals compound into
 
 SendGuard uses a three-tier fallback strategy for investigation and recommendation.
 
+# AI Agent Runtime
+
+SendGuard's investigation layer uses **Pydantic AI** as the Agent framework.
+
+The Agent is configured with:
+
+```text
+Primary model:
+Gemini
+
+Fallback model:
+Groq
+
+Final fallback:
+Deterministic evidence collection
+```
+
+Pydantic AI exposes the CAMARA-related Python functions as Agent tools.
+
+The Agent can therefore decide:
+
+```text
+Which tool should I call?
+        ↓
+Do I need another signal?
+        ↓
+Do I have sufficient evidence?
+```
+
+The Python tool layer remains responsible for:
+
+* validating tool requests
+* enforcing policy guardrails
+* preventing duplicate successful checks
+* routing demo requests to scenario-controlled signals
+* routing live requests to CAMARA adapters
+* preserving request-local investigation state
+
+This keeps the LLM responsible for reasoning and orchestration while Python remains responsible for execution policy and safety boundaries.
+
 ## Investigation
 
 ```text
@@ -797,14 +888,25 @@ SendGuard provides an additional layer of network intelligence, evidence orchest
 | Layer                        | Technology                                         |
 | ---------------------------- | -------------------------------------------------- |
 | Backend                      | Python + FastAPI                                   |
-| AI Agent                     | Gemini + Groq fallback + deterministic fallback    |
-| Agent Orchestration          | Python tool/function calling                       |
+| AI Agent Runtime             | Pydantic AI                                        |
+| Primary Investigation Model  | Gemini                                             |
+| Investigation Fallback       | Groq                                               |
+| Investigation Final Fallback | Deterministic evidence collection                  |
+| Recommendation Layer         | Gemini / Groq + policy-bounded action selection    |
 | Trust Engine                 | Deterministic Python scoring                       |
 | Frontend                     | React + TypeScript                                 |
 | Network APIs                 | GSMA Open Gateway CAMARA via Nokia Network-as-Code |
 | Current Network Integrations | SIM Swap, Device Swap, Location Verification       |
 | Demo Signal Layer            | Scenario-controlled network signal simulation      |
-| Database                     | None in the current prototype                      |
+                     
+
+The investigation Agent uses **Pydantic AI** to orchestrate CAMARA tools.
+
+Gemini is the primary investigation model, with Groq available as a fallback provider when the primary provider is unavailable.
+
+The final deterministic fallback exists to keep the evidence-collection pipeline operational when both LLM providers are unavailable.
+
+The Trust Engine remains deterministic regardless of which investigation provider is used.
 
 ---
 
@@ -812,6 +914,7 @@ SendGuard provides an additional layer of network intelligence, evidence orchest
 
 ```text
 SendGuard/
+
 │
 ├── backend/
 │   └── app/
@@ -820,12 +923,12 @@ SendGuard/
 │       │   ├── agent.py
 │       │   ├── demo_mode.py
 │       │   ├── demo_scenarios.py
+│       │   ├── investigation_state.py
 │       │   ├── llm_client.py
 │       │   ├── orchestrator.py
 │       │   ├── recommendation.py
 │       │   └── trust_engine.py
 │       │
-│       ├── api/
 │       │
 │       ├── camara/
 │       │   ├── client.py
@@ -833,7 +936,6 @@ SendGuard/
 │       │   ├── location_verification.py
 │       │   └── sim_swap.py
 │       │
-│       ├── models/
 │       └── main.py
 │
 ├── frontend/
@@ -863,6 +965,7 @@ SendGuard/
 │
 └── README.md
 ```
+
 
 ---
 
