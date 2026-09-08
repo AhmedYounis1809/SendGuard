@@ -1,6 +1,14 @@
 """
 SendGuard — LLM Client with 3-tier reliability fallback.
-Single source of truth for every LLM call (Gemini -> Groq -> Deterministic).
+
+INVESTIGATION layer: Pydantic AI Agent (approved agent framework) running
+Gemini as primary model with Groq as an automatic fallback model via
+Pydantic AI's built-in FallbackModel — falling further back to a
+deterministic (no-LLM) investigation if both providers fail.
+
+RECOMMENDATION layer: UNCHANGED from before (raw google-genai / groq SDK
+calls) — this file's recommendation section was not part of the migration
+scope and is preserved verbatim.
 """
 
 import os
@@ -16,6 +24,25 @@ try:
 except ImportError:
     _GROQ_AVAILABLE = False
 
+from pydantic_ai import Agent
+from pydantic_ai.models.google import GoogleModel
+from pydantic_ai.models.groq import GroqModel
+from pydantic_ai.models.fallback import FallbackModel
+try:
+    from pydantic_ai.exceptions import FallbackExceptionGroup
+except ImportError:
+    # Fallback import path in case the exception lives elsewhere in the
+    # installed pydantic-ai version — report the exact ImportError if this
+    # also fails, so the import path can be corrected quickly.
+    from pydantic_ai.models.fallback import FallbackExceptionGroup
+
+from app.agent.investigation_state import (
+    transaction_context_var,
+    checked_tools_var,
+    collected_signals_var,
+    reset_investigation_state,
+)
+
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
@@ -24,6 +51,8 @@ _groq_client = None
 
 
 def _get_gemini_client() -> genai.Client:
+    """Used by the RECOMMENDATION layer only (unchanged) — the investigation
+    layer now goes through Pydantic AI instead."""
     global _gemini_client
     if _gemini_client is None:
         if not os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
@@ -33,6 +62,7 @@ def _get_gemini_client() -> genai.Client:
 
 
 def _get_groq_client():
+    """Used by the RECOMMENDATION layer only (unchanged)."""
     global _groq_client
     if not _GROQ_AVAILABLE:
         raise RuntimeError("groq package not installed (pip install groq)")
@@ -45,220 +75,66 @@ def _get_groq_client():
 
 
 # ===========================================================================
-# INVESTIGATION
+# INVESTIGATION — Pydantic AI Agent (Gemini primary, Groq fallback via
+# FallbackModel), deterministic investigation as the final safety net.
 # ===========================================================================
 
-def _gemini_investigate(transaction_context, available_tools, tool_map, rejection_check_fn, max_rounds=4) -> dict:
-    client = _get_gemini_client()
-    prompt = f"""You are a fraud-risk INVESTIGATION agent for a financial
-transaction security system called SendGuard. Transaction context:
-
-{transaction_context}
-
-You have tools to gather network-based evidence. Call one or more tools,
-look at the result, and decide whether more evidence is needed. Be
-thorough for large transactions or new beneficiaries; a small routine
-transaction may need less checking.
-
-Only request the location check if `location_reference_available` is true
-in the context above — it will be rejected otherwise. Never request a tool
-already successfully checked in this conversation.
-
-You gather EVIDENCE ONLY — you do not calculate risk scores or make the
-final decision. Once you have sufficient evidence, stop calling tools."""
-
-    contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
-    collected_signals: dict = {}
-
-    for _round in range(max_rounds):
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                tools=available_tools,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-            ),
-        )
-        function_calls = response.function_calls or []
-        if not function_calls:
-            break
-        contents.append(response.candidates[0].content)
-
-        function_response_parts = []
-        for call in function_calls:
-            if call.name in collected_signals:
-                function_response_parts.append(types.Part.from_function_response(
-                    name=call.name, response={"skipped": True, "reason": "already checked"}))
-                continue
-            reason = rejection_check_fn(call.name, transaction_context)
-            if reason is not None:
-                function_response_parts.append(types.Part.from_function_response(
-                    name=call.name, response={"skipped": True, "reason": reason}))
-                continue
-            fn = tool_map.get(call.name)
-            if fn is None:
-                continue
-            try:
-                result = fn(**call.args)
-            except Exception as exc:
-                result = {"degraded": True, "error": str(exc)}
-            collected_signals[call.name] = result
-            function_response_parts.append(types.Part.from_function_response(name=call.name, response=result))
-
-        contents.append(types.Content(role="user", parts=function_response_parts))
-
-    return collected_signals
+_investigation_agent: Optional[Agent] = None
 
 
-GROQ_INVESTIGATION_TOOLS_SCHEMA = [
-    {"type": "function", "function": {
-        "name": "check_sim_swap_tool",
-        "description": "Checks whether the user's SIM card was recently swapped, and how long ago.",
-        "parameters": {"type": "object", "properties": {"phone_number": {"type": "string"}}, "required": ["phone_number"]},
-    }},
-    {"type": "function", "function": {
-        "name": "check_device_swap_tool",
-        "description": "Checks whether the user's phone number recently appeared on a new device.",
-        "parameters": {"type": "object", "properties": {"phone_number": {"type": "string"}}, "required": ["phone_number"]},
-    }},
-    {"type": "function", "function": {
-        "name": "check_location_tool",
-        "description": "Verifies whether the device is within the expected area. Only call if location_reference_available is true.",
-        "parameters": {"type": "object", "properties": {
-            "phone_number": {"type": "string"},
-            "expected_latitude": {"type": "number"},
-            "expected_longitude": {"type": "number"},
-        }, "required": ["phone_number", "expected_latitude", "expected_longitude"]},
-    }},
-]
-
-
-def _groq_chat_completion_with_retry(client, max_attempts: int = 2, **kwargs):
+def _get_investigation_agent(available_tools: list) -> Agent:
     """
-    Small retry wrapper specific to Groq's strict tool-name validation.
-    Open-weight models (e.g. gpt-oss-20b) occasionally hallucinate a
-    shortened tool name (e.g. "check_device_swap" instead of
-    "check_device_swap_tool"), which Groq's API rejects outright with a
-    400 error BEFORE we ever get a response object — there's no partial
-    result to recover from, only a full exception. A short retry of the
-    exact same request usually recovers on the next generation attempt,
-    without escalating all the way to the deterministic fallback over a
-    single transient naming quirk.
+    Builds the Pydantic AI investigation Agent once and caches it.
+
+    FallbackModel tries `gemini_model` first; on a ModelAPIError (rate
+    limits, 5xx, timeouts — the default `fallback_on` behavior) it
+    automatically retries the same request against `groq_model`. If BOTH
+    fail, Pydantic AI raises a FallbackExceptionGroup, which we catch in
+    investigate_transaction() to drop to the deterministic path.
+
+    Tools are registered via `tool_plain` (not `tool`) specifically because
+    the existing tool functions must keep their exact original signatures
+    (no RunContext parameter) — see orchestrator.py's docstring.
     """
-    last_exc = None
-    for attempt in range(max_attempts):
-        try:
-            return client.chat.completions.create(**kwargs)
-        except Exception as exc:
-            last_exc = exc
-            msg = str(exc)
-            if "tool_use_failed" in msg or "not in request.tools" in msg:
-                print(f"[SendGuard][LLM] Groq tool-name validation failed (attempt {attempt + 1}/{max_attempts}), retrying...")
+    global _investigation_agent
+    if _investigation_agent is None:
+        gemini_model = GoogleModel(GEMINI_MODEL)
+        groq_model = GroqModel(GROQ_MODEL)
+        fallback_model = FallbackModel(gemini_model, groq_model)
+
+        agent = Agent(fallback_model)
+        for tool_fn in available_tools:
+            agent.tool_plain(tool_fn)
+
+        _investigation_agent = agent
+    return _investigation_agent
+
+
+def _infer_investigation_mode(result) -> str:
+    """
+    Best-effort introspection of which model in the FallbackModel chain
+    actually produced the final response, purely for transparency in the
+    demo UI (does not affect correctness of the investigation itself,
+    which already succeeded either way by the time this runs).
+    """
+    try:
+        for message in reversed(result.all_messages()):
+            model_name = getattr(message, "model_name", None)
+            if not model_name:
                 continue
-            raise
-    raise last_exc
-
-
-def _groq_investigate(transaction_context, tool_map, rejection_check_fn, max_rounds: int = 4) -> dict:
-    """
-    Multi-turn Reason -> Tool -> Reason loop via Groq (OpenAI-compatible
-    chat completions tool calling), mirroring _gemini_investigate's
-    behavior: Groq sees each round's real tool results before deciding
-    whether more evidence is needed, instead of committing to a single
-    upfront batch of tool calls.
-    """
-    client = _get_groq_client()
-    prompt = f"""You are a fraud-risk INVESTIGATION agent for a financial
-transaction security system called SendGuard. Transaction context:
-
-{transaction_context}
-
-Available tools (use these EXACT names, do not shorten or modify them):
-- check_sim_swap_tool
-- check_device_swap_tool
-- check_location_tool
-
-You have tools to gather network-based evidence. Call one or more tools,
-look at the result, and THEN decide whether you have enough evidence or
-need to check something else. Be thorough for large transactions or new
-beneficiaries; a small routine transaction may need less checking.
-
-Only request the location check if `location_reference_available` is true
-in the context above — it will be rejected otherwise. Never request a tool
-already successfully checked in this conversation.
-
-You gather EVIDENCE ONLY — you do not calculate risk scores or make the
-final decision. Once you have sufficient evidence, stop calling tools and
-simply confirm you're done."""
-
-    messages: list = [{"role": "user", "content": prompt}]
-    collected_signals: dict = {}
-
-    for _round in range(max_rounds):
-        response = _groq_chat_completion_with_retry(
-            client,
-            model=GROQ_MODEL,
-            messages=messages,
-            tools=GROQ_INVESTIGATION_TOOLS_SCHEMA,
-            tool_choice="auto",
-        )
-
-        message = response.choices[0].message
-        tool_calls = message.tool_calls or []
-
-        if not tool_calls:
-            break  # Groq decided it has sufficient evidence — real stopping condition
-
-        # Record the assistant's tool-call turn in proper OpenAI/Groq format
-        messages.append({
-            "role": "assistant",
-            "content": message.content or "",
-            "tool_calls": [
-                {
-                    "id": call.id,
-                    "type": "function",
-                    "function": {"name": call.function.name, "arguments": call.function.arguments},
-                }
-                for call in tool_calls
-            ],
-        })
-
-        for call in tool_calls:
-            name = call.function.name
-            try:
-                args = json.loads(call.function.arguments)
-            except Exception:
-                args = {}
-
-            if name in collected_signals:
-                tool_result = {"skipped": True, "reason": "already checked"}
-            else:
-                reason = rejection_check_fn(name, transaction_context)
-                if reason is not None:
-                    tool_result = {"skipped": True, "reason": reason}
-                else:
-                    fn = tool_map.get(name)
-                    if fn is None:
-                        tool_result = {"degraded": True, "error": f"unknown tool {name}"}
-                    else:
-                        try:
-                            tool_result = fn(**args)
-                        except Exception as exc:
-                            tool_result = {"degraded": True, "error": str(exc)}
-                        collected_signals[name] = tool_result
-
-            # Real "tool" role message with the matching tool_call_id — not
-            # a fake result stuffed into the prompt text.
-            messages.append({
-                "role": "tool",
-                "tool_call_id": call.id,
-                "content": json.dumps(tool_result),
-            })
-
-    return collected_signals
+            if GEMINI_MODEL in model_name or "gemini" in model_name.lower():
+                return "AI_GEMINI"
+            if GROQ_MODEL in model_name or "groq" in model_name.lower():
+                return "AI_GROQ_FALLBACK"
+            return f"AI_PYDANTIC:{model_name}"
+    except Exception as exc:
+        print(f"[SendGuard][LLM] Could not introspect which model handled the request: {exc}")
+    return "AI_PYDANTIC"
 
 
 def _deterministic_investigate(transaction_context, tool_map, rejection_check_fn) -> dict:
+    """UNCHANGED — the existing deterministic investigation fallback, calling
+    the exact same tool functions directly."""
     phone_number = transaction_context.get("phone_number")
     collected_signals = {}
     for name in ["check_sim_swap_tool", "check_device_swap_tool", "check_location_tool"]:
@@ -284,30 +160,50 @@ def _deterministic_investigate(transaction_context, tool_map, rejection_check_fn
 
 def investigate_transaction(transaction_context, available_tools, tool_map, rejection_check_fn) -> tuple[dict, str, Optional[str]]:
     """Returns (collected_signals, mode, fallback_reason)."""
-    try:
-        print("[SendGuard][LLM] Investigation: trying Gemini...")
-        signals = _gemini_investigate(transaction_context, available_tools, tool_map, rejection_check_fn)
-        print("[SendGuard][LLM] Investigation SOURCE = GEMINI (success)")
-        return signals, "AI_GEMINI", None
-    except Exception as exc:
-        gemini_error = str(exc)
-        print(f"[SendGuard][LLM] Investigation: Gemini FAILED ({gemini_error}). Trying Groq...")
+    reset_investigation_state(transaction_context)
+
+    prompt = f"""You are a fraud-risk INVESTIGATION agent for a financial
+transaction security system called SendGuard. Transaction context:
+
+{transaction_context}
+
+You have tools to gather network-based evidence. Call one or more tools,
+look at the result, and THEN decide whether you have enough evidence or
+need to check something else. Be thorough for large transactions or new
+beneficiaries; a small routine transaction may need less checking.
+
+Only request the location check if `location_reference_available` is true
+in the context above — it will be rejected otherwise. Never request a tool
+already successfully checked in this conversation.
+
+You gather EVIDENCE ONLY — you do not calculate risk scores or make the
+final decision. Once you have sufficient evidence, stop calling tools and
+simply confirm you're done."""
 
     try:
-        signals = _groq_investigate(transaction_context, tool_map, rejection_check_fn)
-        print("[SendGuard][LLM] Investigation SOURCE = GROQ (fallback success)")
-        return signals, "AI_GROQ_FALLBACK", f"Gemini failed: {gemini_error}"
+        print("[SendGuard][LLM] Investigation: running Pydantic AI agent (Gemini primary, Groq fallback)...")
+        agent = _get_investigation_agent(available_tools)
+        result = agent.run_sync(prompt)
+        signals = collected_signals_var.get() or {}
+        mode = _infer_investigation_mode(result)
+        reason = None if mode == "AI_GEMINI" else "Gemini unavailable — Pydantic AI's FallbackModel used Groq"
+        print(f"[SendGuard][LLM] Investigation SOURCE = {mode}")
+        return signals, mode, reason
+    except FallbackExceptionGroup as exc:
+        print(f"[SendGuard][LLM] Investigation: both Gemini and Groq failed via Pydantic AI ({exc}). Using deterministic fallback...")
     except Exception as exc:
-        groq_error = str(exc)
-        print(f"[SendGuard][LLM] Investigation: Groq FAILED ({groq_error}). Using deterministic fallback...")
+        # Any other unexpected error (e.g. a Pydantic AI/library issue) —
+        # do not let the whole request crash, drop to deterministic instead.
+        print(f"[SendGuard][LLM] Investigation: Pydantic AI agent raised an unexpected error ({exc}). Using deterministic fallback...")
 
+    reset_investigation_state(transaction_context)  # clean slate before the deterministic pass
     signals = _deterministic_investigate(transaction_context, tool_map, rejection_check_fn)
     print("[SendGuard][LLM] Investigation SOURCE = DETERMINISTIC (no LLM available)")
-    return signals, "DETERMINISTIC_FALLBACK", f"Gemini failed: {gemini_error} | Groq failed: {groq_error}"
+    return signals, "DETERMINISTIC_FALLBACK", "Both Gemini and Groq were unavailable"
 
 
 # ===========================================================================
-# RECOMMENDATION
+# RECOMMENDATION — UNCHANGED (not part of the Pydantic AI migration scope)
 # ===========================================================================
 
 def _build_action_prompt(tier, transaction_context, degraded_signals, reasons, allowed) -> str:
