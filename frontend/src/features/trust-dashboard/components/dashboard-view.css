@@ -267,9 +267,9 @@
 }
 
 .risk-chip--high {
-  color: #e0637c;
-  background: rgba(224, 99, 124, 0.14);
-  border-color: rgba(224, 99, 124, 0.35);
+  color: #eab308;
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.35);
 }
 
 .risk-chip--critical {
