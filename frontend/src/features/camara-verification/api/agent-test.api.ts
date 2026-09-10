@@ -38,13 +38,19 @@ export interface AgentTestResult {
 // English message, so callers with access to the i18n `t()` function can
 // render this in the active language.
 export class AgentApiError extends Error {
+  public readonly i18nKey: string;
+  public readonly i18nParams: Record<string, string | number> | undefined;
+
   constructor(
-    public readonly i18nKey: string,
-    public readonly i18nParams: Record<string, string | number> | undefined,
+    i18nKey: string,
+    i18nParams: Record<string, string | number> | undefined,
     fallbackMessage: string,
   ) {
     super(fallbackMessage);
     this.name = "AgentApiError";
+
+    this.i18nKey = i18nKey;
+    this.i18nParams = i18nParams;
   }
 }
 
